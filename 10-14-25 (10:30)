@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GRIDSTRIKE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@100;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Exo 2', sans-serif;
+            background-color: #f0f0f0;
+            touch-action: manipulation;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Morphing blobs pseudo-element */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: -2;
+            background: 
+                radial-gradient(ellipse at 15% 70%, #666 0%, rgba(240,240,240,0) 60%),
+                radial-gradient(ellipse at 85% 25%, #777 0%, rgba(240,240,240,0) 55%),
+                radial-gradient(ellipse at 30% 10%, #888 0%, rgba(240,240,240,0) 65%),
+                radial-gradient(ellipse at 70% 90%, #666 0%, rgba(240,240,240,0) 60%),
+                radial-gradient(ellipse at 50% 50%, #777 0%, rgba(240,240,240,0) 60%);
+            background-color: #f0f0f0;
+            background-size: 300% 300%;
+            animation: morphingBackground 10s ease-in-out infinite alternate;
+        }
+
+        /* Grain overlay pseudo-element */
+        body::after {
+            content: '';
+            position: fixed;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            z-index: -1;
+            pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 600 600' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            opacity: 0.06;
+            animation: grainAnimation 1s steps(4) infinite;
+        }
+
+        @keyframes morphingBackground {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 100% 100%; }
+        }
+        
+        @keyframes grainAnimation {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(-2%, -1%); }
+            50% { transform: translate(2%, 1%); }
+            75% { transform: translate(-1%, 2%); }
+        }
+
+        .board-container {
+            width: 90vw;
+            height: 90vw;
+            max-width: 500px;
+            max-height: 500px;
+        }
+        .chess-board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            gap: 4px;
+        }
+
+        .square {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s ease-in-out;
+            position: relative;
+            border-radius: 6px;
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3), inset 0 -1px 1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .square.light {
+            background: linear-gradient(180deg, #e0e0e0, #c6c6c6);
+        }
+        .square.dark {
+            background: linear-gradient(180deg, #9a9a9a, #7a7a7a);
+        }
+        
+        .piece-svg {
+            width: 70%;
+            height: 70%;
+            cursor: pointer;
+            transition: transform 0.1s ease-in-out;
+            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3));
+            position: relative;
+            z-index: 10;
+        }
+        
+        .pawn-svg {
+            width: 52.5%;
+            height: 52.5%;
+        }
+
+        .square.selected::after, .square.valid-move::after, .square.capture-move::after, .square.swap-move::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 6px;
+            border: 4px solid #FF2A80;
+            box-shadow: 0 0 12px #FF2A80;
+            z-index: 5;
+        }
+
+        .square.selected::after {
+            background-color: rgba(255, 42, 128, 0.75);
+        }
+        
+        .square.valid-move::after, .square.capture-move::after, .square.swap-move::after {
+            background-color: rgba(255, 42, 128, 0.30);
+        }
+        
+        .selected .piece-svg {
+            transform: scale(1.1);
+        }
+
+        .captured-pieces-container {
+            min-height: 100px;
+        }
+        
+        .captured-piece-svg {
+            width: 40px;
+            height: 40px;
+            margin: 2px;
+        }
+        
+        .ability-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .ability-card.selected, .ability-card:hover:not(.disabled) {
+            border-color: #FF2A80;
+            box-shadow: 0 0 15px #FF2A80;
+        }
+        .ability-card.disabled {
+            opacity: 0.25;
+            pointer-events: none;
+        }
+
+        #reset-button:hover, #play-again-button:hover, .difficulty-button:hover {
+            box-shadow: 0 0 15px #FF2A80;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-backdrop.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            text-align: center;
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        .modal-backdrop.visible .modal-content {
+            transform: scale(1);
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div id="main-layout" class="hidden md:flex flex-col md:flex-row items-center justify-center gap-8 w-full max-w-6xl">
+        
+        <div id="control-panel-card" class="bg-white/20 backdrop-blur-md shadow-2xl rounded-2xl border border-white/30 p-6 flex flex-col items-center h-full w-full md:w-80 order-2 md:order-1">
+            <h1 class="text-3xl md:text-4xl font-black text-center text-white mb-2" style="text-shadow: 1px 1px 3px rgba(0,0,0,0.5);">GRIDSTRIKE</h1>
+            
+            <div id="status-panel" class="text-center mb-4">
+                <p id="turn-info" class="text-xl font-thin text-white" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">Your Turn</p>
+                <p id="ability-info" class="text-lg font-thin text-white h-5" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.5);"></p>
+            </div>
+
+            <hr class="w-full border-white/30 my-4">
+
+            <div id="captured-pieces-area" class="flex flex-col justify-around w-full">
+                <div class="captured-pieces-container mb-4">
+                    <h2 class="text-lg font-thin text-white text-center mb-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">Captured by You</h2>
+                    <div id="white-captured-pieces" class="flex flex-wrap justify-center min-h-[52px]"></div>
+                </div>
+                <div class="captured-pieces-container">
+                    <h2 class="text-lg font-thin text-white text-center mb-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">Captured by Opponent</h2>
+                    <div id="black-captured-pieces" class="flex flex-wrap justify-center min-h-[52px]"></div>
+                </div>
+            </div>
+
+            <div class="mt-auto pt-6 w-full">
+                <button id="reset-button" class="w-full px-6 py-3 bg-white text-black font-thin rounded-lg shadow-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-75 transition-all">
+                    New Game
+                </button>
+            </div>
+        </div>
+
+        <div id="game-board-container" class="order-1 md:order-2 flex flex-col items-center">
+             <div class="board-container">
+                <div id="chess-board" class="chess-board aspect-square w-full h-full"></div>
+            </div>
+            <div id="card-hand" class="flex justify-center gap-4 mt-4 w-full">
+                <div id="card-knights-leap" class="ability-card p-4 rounded-lg w-1/3 text-white text-center">
+                    <h3 class="font-black text-sm">KNIGHT'S LEAP</h3>
+                    <p class="font-thin text-xs mt-1">A piece can jump (and capture) in an L shape.</p>
+                </div>
+                <div id="card-phase-shift" class="ability-card p-4 rounded-lg w-1/3 text-white text-center">
+                    <h3 class="font-black text-sm">PHASE SHIFT</h3>
+                    <p class="font-thin text-xs mt-1">Teleport a piece to any open space.</p>
+                </div>
+                <div id="card-assassins-rage" class="ability-card p-4 rounded-lg w-1/3 text-white text-center">
+                    <h3 class="font-black text-sm">ASSASSIN'S RAGE</h3>
+                    <p class="font-thin text-xs mt-1">After a capture, your assassin may move again.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="difficulty-modal" class="modal-backdrop visible">
+        <div class="modal-content">
+            <h2 class="text-2xl font-black text-white mb-6" style="text-shadow: 1px 1px 3px rgba(0,0,0,0.5);">Select Difficulty</h2>
+            <div class="flex flex-col gap-4 w-48">
+                <button data-difficulty="easy" class="difficulty-button w-full px-6 py-3 bg-white text-black font-thin rounded-lg shadow-md hover:bg-gray-200 transition-all">Easy</button>
+                <button data-difficulty="medium" class="difficulty-button w-full px-6 py-3 bg-white text-black font-thin rounded-lg shadow-md hover:bg-gray-200 transition-all">Medium</button>
+                <button data-difficulty="hard" class="difficulty-button w-full px-6 py-3 bg-white text-black font-thin rounded-lg shadow-md hover:bg-gray-200 transition-all">Hard</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-over-modal" class="modal-backdrop">
+        <div class="modal-content bg-white">
+            <h2 id="winner-message" class="text-2xl font-black text-gray-800 mb-4"></h2>
+            <p class="text-gray-600 mb-6 font-thin">Play again?</p>
+            <button id="play-again-button" class="px-6 py-3 bg-white text-black font-thin rounded-lg shadow-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-75 transition-all">
+                Play Again
+            </button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // ... (element references)
+            const boardElement = document.getElementById('chess-board');
+            const turnInfo = document.getElementById('turn-info');
+            const abilityInfo = document.getElementById('ability-info');
+            const resetButton = document.getElementById('reset-button');
+            const gameOverModal = document.getElementById('game-over-modal');
+            const winnerMessage = document.getElementById('winner-message');
+            const playAgainButton = document.getElementById('play-again-button');
+            const whiteCapturedContainer = document.getElementById('white-captured-pieces');
+            const blackCapturedContainer = document.getElementById('black-captured-pieces');
+            const cards = document.querySelectorAll('.ability-card');
+            const difficultyModal = document.getElementById('difficulty-modal');
+            const difficultyButtons = document.querySelectorAll('.difficulty-button');
+            const mainLayout = document.getElementById('main-layout');
+
+            // ... (game state variables)
+            const BOARD_SIZE = 5;
+            let board = [];
+            let currentPlayer = 'white';
+            let selectedPiece = null;
+            let validMoves = [];
+            let isGameOver = false;
+            let isPlayerTurn = true;
+            let commanderSwapUsed = { white: false, black: false };
+            let capturedByWhite = [];
+            let capturedByBlack = [];
+            let activeCard = null;
+            let cardsUsed = { 'card-knights-leap': false, 'card-phase-shift': false, 'card-assassins-rage': false };
+            let assassinRageActive = false;
+            let gameDifficulty = 'easy';
+            
+            // ... (PIECES_SVG definitions remain the same)
+            const PIECE_COLORS = { 
+                white: 'white',
+                black: 'black'
+            };
+
+            const PIECES_SVG = {
+                commander: (color) => {
+                    const isWhite = color === PIECE_COLORS.white;
+                    if (isWhite) {
+                        return `<svg class="piece-svg" viewBox="0 0 100 100">
+                                    <defs>
+                                        <linearGradient id="grad_cmd_w_border_final" x1="0%" y1="50%" x2="100%" y2="50%">
+                                            <stop offset="0%" stop-color="#FA74B0" />
+                                            <stop offset="55%" stop-color="#0382BD" />
+                                            <stop offset="100%" stop-color="#70F9AD" />
+                                        </linearGradient>
+                                        <clipPath id="center-clip-final-final"><circle cx="50" cy="50" r="22"/></clipPath>
+                                    </defs>
+                                    <circle cx="50" cy="50" r="45" fill="url(#grad_cmd_w_border_final)"/>
+                                    <circle cx="50" cy="50" r="34" fill="#d45a99"/>
+                                    <g clip-path="url(#center-clip-final-final)">
+                                        <rect x="0" y="0" width="50" height="50" fill="#237e96"/>
+                                        <rect x="50" y="0" width="50" height="50" fill="#78e6b1"/>
+                                        <rect x="0" y="50" width="50" height="50" fill="#6a2ca4"/>
+                                        <rect x="50" y="50" width="50" height="50" fill="#f570a5"/>
+                                    </g>
+                                </svg>`;
+                    } else {
+                        return `<svg class="piece-svg" viewBox="0 0 100 100">
+                                    <defs>
+                                        <linearGradient id="grad_cmd_b_border_final" x1="0%" y1="50%" x2="100%" y2="50%">
+                                            <stop offset="0%" stop-color="#aaaaaa" />
+                                            <stop offset="55%" stop-color="#666666" />
+                                            <stop offset="100%" stop-color="#cccccc" />
+                                        </linearGradient>
+                                        <clipPath id="center-clip-b-final-final"><circle cx="50" cy="50" r="22"/></clipPath>
+                                    </defs>
+                                    <circle cx="50" cy="50" r="45" fill="url(#grad_cmd_b_border_final)"/>
+                                    <circle cx="50" cy="50" r="34" fill="#888888"/>
+                                    <g clip-path="url(#center-clip-b-final-final)">
+                                        <rect x="0" y="0" width="50" height="50" fill="#777777"/>
+                                        <rect x="50" y="0" width="50" height="50" fill="#bbbbbb"/>
+                                        <rect x="0" y="50" width="50" height="50" fill="#555555"/>
+                                        <rect x="50" y="50" width="50" height="50" fill="#999999"/>
+                                    </g>
+                                </svg>`;
+                    }
+                },
+                guardian: (color) => {
+                    const isWhite = color === PIECE_COLORS.white;
+                    if (isWhite) {
+                        return `<svg class="piece-svg" viewBox="0 0 100 100">
+                                    <defs>
+                                        <linearGradient id="grad_grd_w_inner">
+                                            <stop offset="0%" stop-color="#009DC4"/>
+                                            <stop offset="100%" stop-color="#8A2BE2"/>
+                                        </linearGradient>
+                                    </defs>
+                                    <g transform="translate(5, 5) scale(0.9)">
+                                        <polygon points="0,0 100,0 80,20 20,20" fill="#009DC4"/>
+                                        <polygon points="0,0 0,100 20,80 20,20" fill="#8A2BE2"/>
+                                        <polygon points="100,0 100,100 80,80 80,20" fill="#98FFC3"/>
+                                        <polygon points="0,100 100,100 80,80 20,80" fill="#FF85C0"/>
+                                        <rect x="20" y="20" width="60" height="60" fill="url(#grad_grd_w_inner)"/>
+                                    </g>
+                                </svg>`;
+                    } else {
+                        return `<svg class="piece-svg" viewBox="0 0 100 100">
+                                    <defs>
+                                        <linearGradient id="grad_grd_b_inner">
+                                            <stop offset="0%" stop-color="#999999"/>
+                                            <stop offset="100%" stop-color="#555555"/>
+                                        </linearGradient>
+                                    </defs>
+                                    <g transform="translate(5, 5) scale(0.9)">
+                                        <polygon points="0,0 100,0 80,20 20,20" fill="#777777"/>
+                                        <polygon points="0,0 0,100 20,80 20,20" fill="#555555"/>
+                                        <polygon points="100,0 100,100 80,80 80,20" fill="#bbbbbb"/>
+                                        <polygon points="0,100 100,100 80,80 20,80" fill="#999999"/>
+                                        <rect x="20" y="20" width="60" height="60" fill="url(#grad_grd_b_inner)"/>
+                                    </g>
+                                </svg>`;
+                    }
+                },
+                assassin: (color) => {
+                    const isWhite = color === PIECE_COLORS.white;
+                    const c1 = isWhite ? '#FF85C0' : '#888888';
+                    const c2 = isWhite ? '#8A2BE2' : '#555555';
+                    return `<svg class="piece-svg" viewBox="0 0 100 100">
+                               <defs>
+                                    <radialGradient id="grad_asn_${isWhite?'w':'b'}" cx="35%" cy="35%">
+                                        <stop offset="0%" stop-color="${c1}" />
+                                        <stop offset="100%" stop-color="${c2}" />
+                                    </radialGradient>
+                                </defs>
+                                <circle cx="50" cy="50" r="45" fill="url(#grad_asn_${isWhite?'w':'b'})"/>
+                            </svg>`;
+                },
+                pawn: (color) => {
+                     const isWhite = color === PIECE_COLORS.white;
+                     const c1 = isWhite ? '#0096FF' : '#a2a2a2';
+                     const c2 = isWhite ? '#8A2BE2' : '#888888';
+                     const c3 = isWhite ? '#66CDAA' : '#656565';
+                     const c4 = isWhite ? '#FF69B4' : '#c0c0c0';
+                     return `<svg class="piece-svg pawn-svg" viewBox="0 0 100 100">
+                                <polygon points="0,0 100,0 50,50" fill="${c1}"/>
+                                <polygon points="0,0 0,100 50,50" fill="${c2}"/>
+                                <polygon points="100,0 100,100 50,50" fill="${c3}"/>
+                                <polygon points="0,100 100,100 50,50" fill="${c4}"/>
+                            </svg>`;
+                },
+            };
+
+            function startGame(difficulty) {
+                gameDifficulty = difficulty;
+                difficultyModal.classList.remove('visible');
+                mainLayout.classList.remove('hidden');
+                mainLayout.classList.add('flex');
+                initializeGame();
+            }
+
+            function initializeGame() {
+                board = createInitialBoard();
+                currentPlayer = 'white';
+                selectedPiece = null;
+                validMoves = [];
+                isGameOver = false;
+                isPlayerTurn = true;
+                commanderSwapUsed = { white: false, black: false };
+                capturedByWhite = [];
+                capturedByBlack = [];
+                activeCard = null;
+                cardsUsed = { 'card-knights-leap': false, 'card-phase-shift': false, 'card-assassins-rage': false };
+                assassinRageActive = false;
+                
+                cards.forEach(card => card.classList.remove('selected', 'disabled'));
+
+                renderBoard();
+                renderCapturedPieces();
+                updateStatus();
+                gameOverModal.classList.remove('visible');
+            }
+            
+            function createInitialBoard() {
+                const newBoard = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
+                const p = PIECES_SVG;
+                newBoard[4][2] = { piece: 'commander', color: 'white', svg: p.commander(PIECE_COLORS.white) };
+                newBoard[4][3] = { piece: 'guardian', color: 'white', svg: p.guardian(PIECE_COLORS.white) };
+                newBoard[4][1] = { piece: 'assassin', color: 'white', svg: p.assassin(PIECE_COLORS.white) };
+                newBoard[3][1] = { piece: 'pawn', color: 'white', svg: p.pawn(PIECE_COLORS.white) };
+                newBoard[3][2] = { piece: 'pawn', color: 'white', svg: p.pawn(PIECE_COLORS.white) };
+                newBoard[3][3] = { piece: 'pawn', color: 'white', svg: p.pawn(PIECE_COLORS.white) };
+
+                newBoard[0][2] = { piece: 'commander', color: 'black', svg: p.commander(PIECE_COLORS.black) };
+                newBoard[0][1] = { piece: 'guardian', color: 'black', svg: p.guardian(PIECE_COLORS.black) };
+                newBoard[0][3] = { piece: 'assassin', color: 'black', svg: p.assassin(PIECE_COLORS.black) };
+                newBoard[1][1] = { piece: 'pawn', color: 'black', svg: p.pawn(PIECE_COLORS.black) };
+                newBoard[1][2] = { piece: 'pawn', color: 'black', svg: p.pawn(PIECE_COLORS.black) };
+                newBoard[1][3] = { piece: 'pawn', color: 'black', svg: p.pawn(PIECE_COLORS.black) };
+
+                return newBoard;
+            }
+
+            function renderBoard() {
+                boardElement.innerHTML = '';
+                for (let r = 0; r < BOARD_SIZE; r++) {
+                    for (let c = 0; c < BOARD_SIZE; c++) {
+                        const square = document.createElement('div');
+                        square.classList.add('square');
+                        const isLight = (r + c) % 2 === 0;
+                        square.classList.add(isLight ? 'light' : 'dark');
+                        square.dataset.row = r;
+                        square.dataset.col = c;
+
+                        const piece = board[r][c];
+                        if (piece) {
+                            square.innerHTML = piece.svg;
+                        }
+                        boardElement.appendChild(square);
+                    }
+                }
+                addEventListeners();
+            }
+            
+            function addEventListeners() {
+                document.querySelectorAll('.square').forEach(square => square.addEventListener('click', onSquareClick));
+                cards.forEach(card => card.addEventListener('click', onCardClick));
+            }
+            
+            function onCardClick(event) {
+                const cardId = event.currentTarget.id;
+                if (cardsUsed[cardId]) return;
+
+                if (activeCard === cardId) {
+                    activeCard = null;
+                    event.currentTarget.classList.remove('selected');
+                    deselectPiece();
+                } else {
+                    cards.forEach(c => c.classList.remove('selected'));
+                    activeCard = cardId;
+                    event.currentTarget.classList.add('selected');
+                    if(selectedPiece) deselectPiece();
+                }
+            }
+
+            function onSquareClick(event) {
+                if (isGameOver || !isPlayerTurn) return;
+                
+                const square = event.currentTarget;
+                const row = parseInt(square.dataset.row);
+                const col = parseInt(square.dataset.col);
+                const piece = board[row][col];
+                
+                if (selectedPiece) {
+                    if (row === selectedPiece.r && col === selectedPiece.c) {
+                        deselectPiece();
+                        return;
+                    }
+
+                    const move = validMoves.find(m => m.r === row && m.c === col);
+                    if (move) {
+                        const isCapture = !!board[row][col];
+                        const pieceType = board[selectedPiece.r][selectedPiece.c].piece;
+
+                        movePiece(selectedPiece.r, selectedPiece.c, row, col, move.isSwap);
+
+                        if (activeCard) {
+                             if (activeCard === 'card-assassins-rage' && pieceType === 'assassin' && isCapture) {
+                                assassinRageActive = true;
+                            }
+                            cardsUsed[activeCard] = true;
+                            document.getElementById(activeCard)?.classList.add('disabled');
+                            cards.forEach(c => c.classList.remove('selected'));
+                            activeCard = null;
+                        }
+
+                        if (assassinRageActive) {
+                            assassinRageActive = false;
+                            selectPiece(row, col);
+                            return;
+                        }
+
+                        deselectPiece();
+                        switchPlayer();
+                    } else if (piece && piece.color === currentPlayer) {
+                        selectPiece(row, col);
+                    } else {
+                        deselectPiece();
+                    }
+                } else if (piece && piece.color === currentPlayer) {
+                    selectPiece(row, col);
+                }
+            }
+            
+            function isCommanderProtected(r, c, color) {
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        if (dr === 0 && dc === 0) continue;
+                        const adjR = r + dr;
+                        const adjC = c + dc;
+                        if (isWithinBoard(adjR, adjC)) {
+                            const adjacentPiece = board[adjR][adjC];
+                            if (adjacentPiece && adjacentPiece.piece === 'guardian' && adjacentPiece.color === color) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            function selectPiece(r, c) {
+                deselectPiece();
+                const piece = board[r][c];
+                selectedPiece = { r, c };
+                validMoves = getValidMoves(piece, r, c);
+                
+                if (activeCard) {
+                    if(activeCard === 'card-knights-leap') {
+                        validMoves.push(...getKnightLeapMoves(r, c, piece.color));
+                    } else if (activeCard === 'card-phase-shift') {
+                         validMoves = getPhaseShiftMoves(r, c, piece.color);
+                    }
+                }
+
+                if (piece.piece === 'commander' && !commanderSwapUsed[piece.color] && !activeCard) {
+                    abilityInfo.textContent = 'Commander Swap Available';
+                }
+
+                highlightSquares();
+            }
+
+            function deselectPiece() {
+                selectedPiece = null;
+                validMoves = [];
+                if(abilityInfo.textContent === 'Commander Swap Available') {
+                    abilityInfo.textContent = '';
+                }
+                highlightSquares();
+            }
+            
+            function movePiece(fromR, fromC, toR, toC, isSwap = false) {
+                if (isSwap) {
+                    const piece1 = board[fromR][fromC];
+                    const piece2 = board[toR][toC];
+                    board[toR][toC] = piece1;
+                    board[fromR][fromC] = piece2;
+                    commanderSwapUsed[currentPlayer] = true;
+                } else {
+                    const piece = board[fromR][fromC];
+                    const capturedPiece = board[toR][toC];
+
+                    if (capturedPiece) {
+                        if (currentPlayer === 'white') {
+                            capturedByWhite.push(capturedPiece);
+                        } else {
+                            capturedByBlack.push(capturedPiece);
+                        }
+                        renderCapturedPieces();
+                    }
+
+                    if (capturedPiece && capturedPiece.piece === 'commander') {
+                        isGameOver = true;
+                    }
+                    board[toR][toC] = piece;
+                    board[fromR][fromC] = null;
+                }
+                renderBoard();
+            }
+            
+            function renderCapturedPieces() {
+                whiteCapturedContainer.innerHTML = '';
+                blackCapturedContainer.innerHTML = '';
+
+                capturedByWhite.forEach(piece => {
+                    const pieceDiv = document.createElement('div');
+                    pieceDiv.innerHTML = piece.svg.replace('class="', 'class="captured-piece-svg ');
+                    whiteCapturedContainer.appendChild(pieceDiv);
+                });
+
+                capturedByBlack.forEach(piece => {
+                    const pieceDiv = document.createElement('div');
+                    pieceDiv.innerHTML = piece.svg.replace('class="', 'class="captured-piece-svg ');
+                    blackCapturedContainer.appendChild(pieceDiv);
+                });
+            }
+
+            function switchPlayer() {
+                if (isGameOver) {
+                    showGameOverModal();
+                    return;
+                }
+                currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
+                updateStatus();
+
+                if (currentPlayer === 'black') {
+                    isPlayerTurn = false;
+                    setTimeout(makeComputerMove, 1000);
+                } else {
+                    isPlayerTurn = true;
+                }
+            }
+            
+            function highlightSquares() {
+                document.querySelectorAll('.square').forEach(s => s.classList.remove('selected', 'valid-move', 'capture-move', 'swap-move'));
+                
+                if (selectedPiece) {
+                    document.querySelector(`[data-row='${selectedPiece.r}'][data-col='${selectedPiece.c}']`)?.classList.add('selected');
+                }
+
+                validMoves.forEach(move => {
+                    const moveSquare = document.querySelector(`[data-row='${move.r}'][data-col='${move.c}']`);
+                    if (moveSquare) {
+                        if(move.isSwap) moveSquare.classList.add('swap-move');
+                        else if (board[move.r][move.c]) moveSquare.classList.add('capture-move');
+                        else moveSquare.classList.add('valid-move');
+                    }
+                });
+            }
+            
+            function updateStatus() {
+                if (currentPlayer === 'white') {
+                    turnInfo.textContent = "Your Turn";
+                } else {
+                    turnInfo.textContent = "Computer is thinking...";
+                    abilityInfo.textContent = '';
+                }
+            }
+
+            function showGameOverModal() {
+                const winner = currentPlayer === 'white' ? 'You' : 'The Computer';
+                winnerMessage.textContent = `${winner} won!`;
+                gameOverModal.classList.add('visible');
+            }
+
+            function makeComputerMove() {
+                // This is a router for different AI difficulties
+                let chosenMove;
+                if (gameDifficulty === 'easy') {
+                    chosenMove = makeEasyMove();
+                } else if (gameDifficulty === 'medium') {
+                    chosenMove = makeMediumMove();
+                } else { // Hard
+                    chosenMove = makeHardMove();
+                }
+
+                if (chosenMove) {
+                    movePiece(chosenMove.from.r, chosenMove.from.c, chosenMove.to.r, chosenMove.to.c, chosenMove.to.isSwap);
+                }
+                
+                switchPlayer();
+            }
+
+            function makeEasyMove() {
+                const pieceValues = { commander: 100, guardian: 3, assassin: 3, pawn: 1 };
+                let bestMoves = [];
+                let maxScore = -Infinity;
+
+                for (let r = 0; r < BOARD_SIZE; r++) {
+                    for (let c = 0; c < BOARD_SIZE; c++) {
+                        const piece = board[r][c];
+                        if (piece && piece.color === 'black') {
+                            const moves = getValidMoves(piece, r, c);
+                            for (const move of moves) {
+                                let score = 0;
+                                const targetPiece = board[move.r][move.c];
+                                if (targetPiece) {
+                                    score = pieceValues[targetPiece.piece] || 0;
+                                }
+                                if (score >= maxScore) {
+                                    if (score > maxScore) {
+                                        maxScore = score;
+                                        bestMoves = [];
+                                    }
+                                    bestMoves.push({ from: { r, c }, to: move });
+                                }
+                            }
+                        }
+                    }
+                }
+                 return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+            }
+            
+            function makeMediumMove() {
+                // Medium AI: Prefers captures, but also considers moving to a safe square
+                const pieceValues = { commander: 100, guardian: 3, assassin: 3, pawn: 1 };
+                let bestMoves = [];
+                let maxScore = -Infinity;
+
+                for (let r = 0; r < BOARD_SIZE; r++) {
+                    for (let c = 0; c < BOARD_SIZE; c++) {
+                        const piece = board[r][c];
+                        if (piece && piece.color === 'black') {
+                            const moves = getValidMoves(piece, r, c);
+                            for (const move of moves) {
+                                let score = 0.1; // Small incentive to move
+                                const targetPiece = board[move.r][move.c];
+                                if (targetPiece) {
+                                    score = pieceValues[targetPiece.piece] || 0;
+                                }
+                                
+                                // Check if move is safe
+                                if(!isSquareAttacked(move.r, move.c, 'white')) {
+                                    score += 0.2;
+                                }
+
+                                if (score >= maxScore) {
+                                    if (score > maxScore) {
+                                        maxScore = score;
+                                        bestMoves = [];
+                                    }
+                                    bestMoves.push({ from: { r, c }, to: move });
+                                }
+                            }
+                        }
+                    }
+                }
+                return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+            }
+
+            function makeHardMove() {
+                const bestMove = minimaxRoot(3, board, 'black');
+                return bestMove;
+            }
+
+            function minimaxRoot(depth, currentBoard, playerColor) {
+                const allMoves = getAllMoves(currentBoard, playerColor);
+                let bestScore = -Infinity;
+                let bestMoveFound = null;
+
+                for(const move of allMoves) {
+                    const newBoard = getBoardAfterMove(currentBoard, move);
+                    const score = minimax(depth - 1, newBoard, -Infinity, Infinity, false);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMoveFound = move;
+                    }
+                }
+                return bestMoveFound;
+            }
+
+            function minimax(depth, currentBoard, alpha, beta, isMaximizingPlayer) {
+                if (depth === 0) {
+                    return -evaluateBoard(currentBoard);
+                }
+
+                const playerColor = isMaximizingPlayer ? 'black' : 'white';
+                const allMoves = getAllMoves(currentBoard, playerColor);
+
+                if (isMaximizingPlayer) {
+                    let bestScore = -Infinity;
+                    for (const move of allMoves) {
+                        const newBoard = getBoardAfterMove(currentBoard, move);
+                        bestScore = Math.max(bestScore, minimax(depth - 1, newBoard, alpha, beta, false));
+                        alpha = Math.max(alpha, bestScore);
+                        if (beta <= alpha) {
+                            return bestScore;
+                        }
+                    }
+                    return bestScore;
+                } else {
+                    let bestScore = Infinity;
+                     for (const move of allMoves) {
+                        const newBoard = getBoardAfterMove(currentBoard, move);
+                        bestScore = Math.min(bestScore, minimax(depth - 1, newBoard, alpha, beta, true));
+                        beta = Math.min(beta, bestScore);
+                        if (beta <= alpha) {
+                            return bestScore;
+                        }
+                    }
+                    return bestScore;
+                }
+            }
+            
+            function evaluateBoard(currentBoard) {
+                let totalScore = 0;
+                const pieceValues = { commander: 900, guardian: 50, assassin: 50, pawn: 10 };
+                for (let r = 0; r < BOARD_SIZE; r++) {
+                    for (let c = 0; c < BOARD_SIZE; c++) {
+                        const piece = currentBoard[r][c];
+                        if (piece) {
+                           const value = pieceValues[piece.piece];
+                           totalScore += piece.color === 'white' ? value : -value;
+                        }
+                    }
+                }
+                return totalScore;
+            }
+
+            function getAllMoves(currentBoard, playerColor) {
+                const allMoves = [];
+                for(let r = 0; r < BOARD_SIZE; r++) {
+                    for(let c = 0; c < BOARD_SIZE; c++) {
+                        const piece = currentBoard[r][c];
+                        if(piece && piece.color === playerColor) {
+                            const moves = getValidMoves(piece, r, c);
+                            moves.forEach(move => {
+                                allMoves.push({from: {r,c}, to: move});
+                            });
+                        }
+                    }
+                }
+                return allMoves;
+            }
+
+            function getBoardAfterMove(currentBoard, move) {
+                const newBoard = JSON.parse(JSON.stringify(currentBoard)); // Deep copy
+                const piece = newBoard[move.from.r][move.from.c];
+                newBoard[move.to.r][move.to.c] = piece;
+                newBoard[move.from.r][move.from.c] = null;
+                return newBoard;
+            }
+
+            function isSquareAttacked(r, c, attackerColor) {
+                const opponentMoves = getAllMoves(board, attackerColor);
+                return opponentMoves.some(move => move.to.r === r && move.to.c === c);
+            }
+
+            // ... (get moves functions remain the same)
+            function getValidMoves(piece, r, c) {
+                if (!piece) return [];
+                switch(piece.piece) {
+                    case 'pawn': return getPawnMoves(r, c, piece.color);
+                    case 'guardian': return getGuardianMoves(r, c, piece.color);
+                    case 'assassin': return getAssassinMoves(r, c, piece.color);
+                    case 'commander': return getCommanderMoves(r, c, piece.color);
+                    default: return [];
+                }
+            }
+            
+            function getKnightLeapMoves(r, c, color) {
+                const moves = [];
+                const knightMoves = [
+                    [-2, -1], [-2, 1], [-1, -2], [-1, 2],
+                    [1, -2], [1, 2], [2, -1], [2, 1]
+                ];
+                knightMoves.forEach(([dr, dc]) => {
+                    const nextR = r + dr;
+                    const nextC = c + dc;
+                    if (isWithinBoard(nextR, nextC)) {
+                        const target = board[nextR][nextC];
+                        if (!target || target.color !== color) {
+                            moves.push({ r: nextR, c: nextC });
+                        }
+                    }
+                });
+                return moves;
+            }
+
+            function getPhaseShiftMoves(r, c, color) {
+                const moves = [];
+                for(let row = 0; row < BOARD_SIZE; row++) {
+                    for(let col = 0; col < BOARD_SIZE; col++) {
+                        if (!board[row][col]) {
+                            moves.push({ r: row, c: col });
+                        }
+                    }
+                }
+                return moves;
+            }
+            
+            function isWithinBoard(r, c) {
+                return r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE;
+            }
+
+            function getPawnMoves(r, c, color) {
+                const moves = [];
+                const direction = color === 'white' ? -1 : 1;
+                const oneStep = r + direction;
+                if (isWithinBoard(oneStep, c) && !board[oneStep][c]) moves.push({ r: oneStep, c: c });
+                [{r: oneStep, c: c - 1}, {r: oneStep, c: c + 1}].forEach(move => {
+                    if(isWithinBoard(move.r, move.c) && board[move.r][move.c] && board[move.r][move.c].color !== color) {
+                        moves.push(move);
+                    }
+                });
+                return moves;
+            }
+
+            function getGuardianMoves(r, c, color) {
+                const moves = [];
+                const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+                for (const [dr, dc] of directions) {
+                    for (let i = 1; i <= 2; i++) {
+                        let nextR = r + i * dr;
+                        let nextC = c + i * dc;
+                        if (!isWithinBoard(nextR, nextC)) break;
+                        if (board[nextR][nextC]) {
+                            if (board[nextR][nextC].color !== color) moves.push({ r: nextR, c: nextC });
+                            break;
+                        }
+                        moves.push({ r: nextR, c: nextC });
+                    }
+                }
+                return moves;
+            }
+
+            function getAssassinMoves(r, c, color) {
+                const moves = [];
+                const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+                for (const [dr, dc] of directions) {
+                    const oneStepR = r + dr, oneStepC = c + dc;
+                    const twoStepR = r + 2 * dr, twoStepC = c + 2 * dc;
+
+                    if(isWithinBoard(oneStepR, oneStepC)) {
+                        const oneStepPiece = board[oneStepR][oneStepC];
+                        if(!oneStepPiece || oneStepPiece.color !== color) moves.push({r: oneStepR, c: oneStepC});
+
+                        if (!oneStepPiece || oneStepPiece.color === color) {
+                            if (isWithinBoard(twoStepR, twoStepC)) {
+                               const twoStepPiece = board[twoStepR][twoStepC];
+                               if(!twoStepPiece || twoStepPiece.color !== color) moves.push({r: twoStepR, c: twoStepC});
+                           }
+                        }
+                    }
+                }
+                return moves;
+            }
+            
+            function getCommanderMoves(r, c, color) {
+                const moves = [];
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        if (dr === 0 && dc === 0) continue;
+                        const nextR = r + dr, nextC = c + dc;
+                        if (isWithinBoard(nextR, nextC)) {
+                            const targetPiece = board[nextR][nextC];
+                            if (!targetPiece || targetPiece.color !== color) {
+                                moves.push({ r: nextR, c: nextC });
+                            }
+                            if (!commanderSwapUsed[color] && targetPiece && targetPiece.color === color) {
+                                moves.push({ r: nextR, c: nextC, isSwap: true });
+                            }
+                        }
+                    }
+                }
+                return moves;
+            }
+
+            difficultyButtons.forEach(button => {
+                button.addEventListener('click', () => startGame(button.dataset.difficulty));
+            });
+
+            function showDifficultyScreen() {
+                mainLayout.classList.add('hidden');
+                mainLayout.classList.remove('flex');
+                difficultyModal.classList.add('visible');
+            }
+
+            resetButton.addEventListener('click', showDifficultyScreen);
+            playAgainButton.addEventListener('click', () => {
+                gameOverModal.classList.remove('visible');
+                showDifficultyScreen();
+            });
+
+        });
+    </script>
+</body>
+</html>
+
