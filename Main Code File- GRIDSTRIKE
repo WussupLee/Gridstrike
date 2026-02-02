@@ -22,7 +22,7 @@
             justify-content: center;
         }
 
-        /* High-Contrast Shader Canvas */
+        /* High-Contrast Aether Shader Background */
         #bg-canvas {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2;
             display: block; filter: contrast(1.4) brightness(1.1);
@@ -59,7 +59,7 @@
         }
         #intro-screen.fade-out { opacity: 0; transform: scale(1.1); visibility: hidden; }
 
-        /* Unified HUD Layout - Mathematically centered block */
+        /* Unified HUD Layout - Group Centering Protocol */
         #main-layout {
             transition: opacity 1s ease 0.3s, transform 1s ease 0.3s;
             display: flex; flex-direction: row; align-items: center; justify-content: center;
@@ -68,7 +68,7 @@
         #main-layout.hidden { opacity: 0; transform: translateY(20px); display: none !important; }
         #main-layout.visible { opacity: 1; transform: translateY(0); display: flex; }
 
-        /* SIDEBAR: Siblings for group centering */
+        /* LEFT SIDEBAR */
         #left-info-panel {
             width: 280px;
             display: flex;
@@ -89,7 +89,6 @@
         .progress-line { height: 1.5px; width: 32px; background: rgba(255, 255, 255, 0.1); flex-shrink: 0; }
         .progress-line.filled { background: #fff; box-shadow: 0 0 8px #fff; }
 
-        /* Grand Master Bo3 Outline matched to Aether #FF0066 */
         .boss-series-box {
             border: 1.5px solid #FF0066; border-radius: 20px; padding: 4px 8px; display: flex; gap: 8px;
             box-shadow: 0 0 10px rgba(255, 0, 102, 0.4); margin-left: 8px; background: rgba(255, 0, 102, 0.05); flex-shrink: 0;
@@ -98,7 +97,7 @@
         .dot-boss.win { background: #ff4d94; box-shadow: 0 0 10px #ff4d94; border-color: #ff4d94; }
         .dot-boss.loss { background: #000; border-color: #444; }
 
-        /* GRID GEOMETRY LOCK */
+        /* GRID GEOMETRY LOCK & VERTICAL SIDEBAR LOCK */
         .board-wrapper { display: flex; flex-direction: column; align-items: center; gap: 2.5rem; z-index: 10; flex-shrink: 0; }
         
         .board-slider {
@@ -109,13 +108,12 @@
         }
         .board-container { width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.6s ease; position: relative; overflow: hidden; border-radius: 12px; }
         
-        .slide-out-left { transform: translateX(-120%); opacity: 0; }
-        .slide-in-right { transform: translateX(120%); opacity: 0; transition: none !important; }
-        .slide-to-center { transform: translateX(0); opacity: 1; }
-
         .chess-board { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(5, 1fr); gap: 4px; width: 100%; height: 100%; position: relative; z-index: 1; }
         
-        /* Glass Tiles */
+        /* Tactical Overlays elevated above squares */
+        #move-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 50; }
+        #active-move-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 100; }
+        
         .square { 
             display: flex; justify-content: center; align-items: center; position: relative; border-radius: 4px; 
             backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05); 
@@ -124,25 +122,30 @@
         .square.light { background: rgba(42, 42, 42, 0.85); }
         .square.dark { background: rgba(21, 21, 21, 0.85); }
 
-        /* MOVEMENT VECTORS - FIXED: Explicit z-index to appear ABOVE tiles */
-        #move-overlay {
-            position: absolute; inset: 0; pointer-events: none;
-            grid-column: 1 / span 5; grid-row: 1 / span 5;
-            z-index: 50; /* Higher than squares */
+        /* SELECTION HIGHLIGHT */
+        .square.selected::after { 
+            content: ''; position: absolute; inset: 0; border-radius: 4px; z-index: 10; 
+            border: 3px solid #fff; box-shadow: 0 0 25px #fff; 
+            background-color: rgba(255, 255, 255, 0.3); 
+            pointer-events: none;
         }
-        #active-move-overlay {
-            position: absolute; inset: 0; pointer-events: none;
-            grid-column: 1 / span 5; grid-row: 1 / span 5;
-            z-index: 100; /* Highest interaction layer */
+
+        /* THREAT DETECTION HIGHLIGHT (RED ALERT) */
+        .square.in-danger::after {
+            content: ''; position: absolute; inset: 0; border-radius: 4px; z-index: 10;
+            border: 3px solid #ff0000; box-shadow: 0 0 25px #ff0000;
+            background-color: rgba(255, 0, 0, 0.2);
+            animation: dangerPulse 0.8s infinite alternate;
+            pointer-events: none;
         }
-        
-        .move-line { stroke: #666; stroke-width: 0.5px; stroke-linecap: round; opacity: 0.35; }
-        .move-dot-passive { fill: none; stroke: #666; stroke-width: 0.75px; r: 1.25px; opacity: 0.6; }
+        @keyframes dangerPulse { from { opacity: 0.5; } to { opacity: 1; } }
+
         .move-dot.active { fill: #fff; stroke: #fff; stroke-width: 1px; r: 1.8px; opacity: 1; filter: drop-shadow(0 0 8px rgba(255,255,255,1)); }
+        .move-line { stroke: #666; stroke-width: 0.5px; stroke-linecap: round; opacity: 0.35; }
 
         /* Piece Assets */
         .piece-wrapper { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; position: relative; z-index: 60; }
-        .piece-svg { cursor: pointer; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.8)); display: block; transform-origin: center center; transition: transform 0.2s ease; }
+        .piece-svg { cursor: pointer; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.8)); transition: transform 0.2s ease; }
         .commander-svg { width: 78%; height: 78%; }
         .guardian-svg, .assassin-svg { width: 64%; height: 64%; }
         .pawn-svg { width: 48%; height: 48%; }
@@ -155,26 +158,21 @@
         .ability-card {
             background: linear-gradient(#1c1c1e, #1c1c1e) padding-box, 
                         linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.05) 100%) border-box;
-            border: 1.5px solid transparent; border-radius: 1.5rem; cursor: pointer;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.4); transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
-            position: relative; outline: none;
+            border: 1.5px solid transparent; border-radius: 1.5rem; cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,0.4); transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; position: relative; outline: none;
             padding: 1.5rem 0.75rem; flex: 1;
         }
         .ability-card.selected { 
-            border: 2px solid #fff !important; 
-            transform: translateY(-15px) scale(1.05); 
-            background: linear-gradient(#2c2c2e, #1c1c1e) padding-box, 
-                        linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.5) 100%) border-box !important; 
-            box-shadow: 0 0 25px rgba(255, 255, 255, 0.5);
-            z-index: 200; 
+            border: 2px solid #fff !important; transform: translateY(-15px) scale(1.05); 
+            background: linear-gradient(#2c2c2e, #1c1c1e) padding-box, linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.5) 100%) border-box !important; 
+            box-shadow: 0 0 25px rgba(255, 255, 255, 0.5); z-index: 200; 
         }
         .ability-card.disabled { opacity: 0.15; pointer-events: none; filter: grayscale(1); }
 
         .card-title { font-family: 'Syncopate', sans-serif; font-size: 0.7rem; letter-spacing: -0.02em; margin-bottom: 0.5rem; text-transform: uppercase; }
         .card-desc { font-size: 0.6rem; color: rgba(255,255,255,0.4); font-weight: 100; line-height: 1.3; }
 
-        /* Sidebar Spacing Fix: Absolutely positioned Piece Pool adjacent to board */
+        /* Capture Sidebar anchored to Board Edge */
         #right-captured-panel { 
             position: absolute; left: calc(100% + 1.5rem); top: 0; bottom: 0;
             display: flex; flex-direction: column; justify-content: space-between; 
@@ -182,19 +180,13 @@
         }
         .captured-piece-svg { width: 52px; height: 52px; margin: 0; display: flex; align-items: center; justify-content: center; opacity: 0.8; }
 
-        /* Premium Buttons */
+        /* Premium Transitions */
         .btn-premium {
-            background: linear-gradient(#1c1c1e, #1c1c1e) padding-box, 
-                        linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.05) 100%) border-box;
-            border: 1.5px solid transparent; border-radius: 1.5rem; cursor: pointer;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.4); transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-            display: flex; align-items: center; justify-content: center; text-align: center;
-            outline: none; color: white;
+            background: linear-gradient(#1c1c1e, #1c1c1e) padding-box, linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.05) 100%) border-box;
+            border: 1.5px solid transparent; border-radius: 1.5rem; cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,0.4); transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            display: flex; align-items: center; justify-content: center; text-align: center; color: white; outline: none;
         }
         .btn-premium:hover { transform: scale(1.02); box-shadow: 0 0 30px rgba(255, 255, 255, 0.4); border-color: rgba(255, 255, 255, 0.5); }
-
-        .square.selected::after { content: ''; position: absolute; inset: 0; border-radius: 4px; z-index: 10; border: 2px solid #fff; box-shadow: 0 0 20px #fff; background-color: rgba(255, 255, 255, 0.2); }
-        .square.capture-move::after { content: ''; position: absolute; inset: 0; border-radius: 4px; z-index: 10; border: 2.5px solid #fff; box-shadow: 0 0 25px #fff; background-color: rgba(255, 255, 255, 0.3); }
 
         #next-challenger-overlay { 
             position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; 
@@ -204,7 +196,12 @@
 
         .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 1000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: 0.4s; backdrop-filter: blur(12px); }
         .modal-backdrop.visible { opacity: 1; visibility: visible; }
-        .modal-content { background: linear-gradient(#1c1c1e, #1c1c1e) padding-box, linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.05) 100%) border-box; border: 1.5px solid transparent; padding: 3.5rem; border-radius: 2.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 2rem; }
+        .modal-content { background: linear-gradient(#1c1c1e, #1c1c1e) padding-box, linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.05) 100%) border-box; border: 1.5px solid transparent; padding: 3rem; border-radius: 2.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 2rem; }
+
+        /* Promotion Modal */
+        .promotion-option { width: 120px; height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: 0.3s; }
+        .promotion-option:hover { transform: translateY(-5px); filter: drop-shadow(0 0 15px white); }
+        .promotion-option svg { width: 70px; height: 70px; }
 
         .particle { position: absolute; width: 6px; height: 6px; background: #fff; box-shadow: 0 0 10px #fff; border-radius: 1px; pointer-events: none; z-index: 1000; opacity: 0; }
         @keyframes particleFly { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(0) rotate(360deg); opacity: 0; } }
@@ -225,7 +222,7 @@
 
     <div id="main-layout" class="hidden">
         
-        <!-- Left Sidebar: Integrated child for balanced group centering -->
+        <!-- Left Overview Panel -->
         <div id="left-info-panel">
             <h1 id="aether-title" class="title-font text-5xl">AETHER</h1>
             <p id="challenger-label" class="title-font uppercase tracking-widest">The Apprentice</p>
@@ -252,7 +249,7 @@
             </div>
         </div>
 
-        <!-- Central Group: Board + Powers -->
+        <!-- Central Group -->
         <div class="board-wrapper">
              <div class="board-slider" id="board-shell">
                 <div id="board-container" class="board-container">
@@ -264,7 +261,7 @@
                     </button>
                 </div>
 
-                <!-- SIDEBAR pieces absolutely anchored to board slider -->
+                <!-- SIDEBAR pieces absolutely anchored to Board Shell -->
                 <div id="right-captured-panel">
                     <div class="captured-column">
                         <div id="black-captured-pieces" class="flex flex-col gap-1 items-center min-h-[10px]"></div>
@@ -294,6 +291,24 @@
         <button id="quit-button" title="Quit Challenge" class="btn-premium px-6 py-2 fixed bottom-8 left-8 text-xs">QUIT</button>
     </div>
 
+    <!-- Promotion Modal -->
+    <div id="promotion-modal" class="modal-backdrop">
+        <div class="modal-content">
+            <h2 class="title-font text-white uppercase text-xl">Unit Promotion</h2>
+            <p class="text-sm font-thin text-white/60 -mt-4 uppercase tracking-[0.2em]">Select Upgrade Path</p>
+            <div class="flex gap-8 mt-4">
+                <div id="promote-guardian" class="promotion-option ability-card">
+                    <div id="promo-guardian-icon"></div>
+                    <span class="card-title mt-2">Guardian</span>
+                </div>
+                <div id="promote-assassin" class="promotion-option ability-card">
+                    <div id="promo-assassin-icon"></div>
+                    <span class="card-title mt-2">Assassin</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="game-over-modal" class="modal-backdrop">
         <div class="modal-content">
             <h2 id="winner-message" class="title-font text-white uppercase" style="font-size: 2.2rem;"></h2>
@@ -306,12 +321,12 @@
     <script>
         function el(id) { return document.getElementById(id); }
 
+        /* --- GLOBAL STATE --- */
         var tierTitles = ["The Apprentice", "The Adept", "The Exemplar", "The Grandmaster"];
         var currentStage = 0, board = [], currentPlayer = 'white', selectedPiece = null, validMoves = [], isGameOver = false, isPlayerTurn = true, isAnimating = false;
         var commanderSwapUsed = { white: false, black: false }, capturedByWhite = [], capturedByBlack = [], activeCard = null, runCardsUsed = {};
         var bossResults = []; 
-        var bossModeInterpolation = 0;
-        var bossModeTarget = 0;
+        var bossModeInterpolation = 0, bossModeTarget = 0;
 
         var PIECES_SVG = {
             commander: (color) => {
@@ -331,54 +346,136 @@
             },
             guardian: (color) => {
                 const isW = color === 'white';
-                const c = isW ? ['#FFFFFF', '#CCCCCC', '#BBBBBB', '#999999', '#DDDDDD'] : ['#999999', '#444444', '#555555', '#000000', '#444444'];
+                const c = isW ? ['#FFFFFF', '#CCCCCC', '#BBBBBB', '#999999'] : ['#999999', '#666666', '#444444', '#111111'];
                 return `<svg class="piece-svg guardian-svg" viewBox="0 0 100 100">
                     <polygon points="0,0 100,0 80,20 20,20" fill="${c[0]}"/>
                     <polygon points="0,0 20,20 20,80 0,100" fill="${c[1]}"/>
                     <polygon points="100,0 80,20 80,80 100,100" fill="${c[2]}"/>
                     <polygon points="0,100 100,100 80,80 20,80" fill="${c[3]}"/>
-                    <rect x="20" y="20" width="60" height="60" fill="${c[4]}" />
+                    <rect x="20" y="20" width="60" height="60" fill="${c[1]}" />
+                    <!-- RESET CORE: Square Pyramid (Not Diamond) -->
                     <g transform="translate(35, 35) scale(0.3)">
-                        <polygon points="0,0 100,0 50,50" fill="${c[0]}"/>
-                        <polygon points="0,0 0,100 50,50" fill="${c[1]}"/>
-                        <polygon points="100,0 100,100 50,50" fill="${c[2]}"/>
-                        <polygon points="0,100 100,100 50,50" fill="${c[3]}"/>
+                        <polygon points="0,0 100,0 50,50" fill="${c[0]}"/> <!-- North -->
+                        <polygon points="100,0 100,100 50,50" fill="${c[1]}"/> <!-- East -->
+                        <polygon points="0,100 100,100 50,50" fill="${c[3]}"/> <!-- South -->
+                        <polygon points="0,0 0,100 50,50" fill="${c[2]}"/> <!-- West -->
                     </g>
                 </svg>`;
             },
             assassin: (color) => {
                 const isW = color === 'white';
-                const chassisGrad = isW ? 'grad_asn_w_dyn' : 'grad_asn_b_dyn';
-                const c = isW ? ['#FFFFFF', '#CCCCCC', '#BBBBBB', '#999999'] : ['#999999', '#444444', '#555555', '#000000'];
+                const c = isW ? ['#FFFFFF', '#EAEAEA', '#C0C0C0', '#707070'] : ['#999999', '#666666', '#444444', '#111111'];
                 return `<svg class="piece-svg assassin-svg" viewBox="0 0 100 100">
-                    <defs>
-                        <radialGradient id="grad_asn_b_dyn" cx="50%" cy="50%" r="50%" fx="35%" fy="35%">
-                            <stop offset="0%" stop-color="#B8B8B8" /><stop offset="100%" stop-color="#1A1A1A" />
-                        </radialGradient>
-                        <radialGradient id="grad_asn_w_dyn" cx="50%" cy="50%" r="50%" fx="35%" fy="35%">
-                            <stop offset="0%" stop-color="#FFFFFF" /><stop offset="100%" stop-color="#999999" />
-                        </radialGradient>
-                    </defs>
-                    <circle cx="50" cy="50" r="50" fill="url(#${chassisGrad})"/>
-                    <g transform="translate(50, 50) rotate(45) scale(0.25) translate(-50, -50)">
-                        <polygon points="0,0 100,0 50,50" fill="${c[0]}"/> 
-                        <polygon points="0,0 0,100 50,50" fill="${c[1]}"/> 
-                        <polygon points="100,0 100,100 50,50" fill="${c[3]}"/> 
-                        <polygon points="0,100 100,100 50,50" fill="${c[2]}"/>
+                    <!-- Base Pyramid (Rotated 45 Deg Diamond) -->
+                    <polygon points="50,0 50,50 0,50" fill="${c[0]}"/>   <!-- NW face -->
+                    <polygon points="50,0 100,50 50,50" fill="${c[1]}"/> <!-- NE face -->
+                    <polygon points="0,50 50,50 50,100" fill="${c[2]}"/> <!-- SW face -->
+                    <polygon points="100,50 50,100 50,50" fill="${c[3]}"/> <!-- SE face (Dark South East side) -->
+                    
+                    <!-- Center Layer (Guardian center scale/shape - SQUARE ORIENTATION) -->
+                    <g transform="translate(35, 35) scale(0.3)">
+                        <polygon points="0,0 100,0 50,50" fill="${c[0]}"/> <!-- North -->
+                        <polygon points="100,0 100,100 50,50" fill="${c[1]}"/> <!-- East -->
+                        <polygon points="0,100 100,100 50,50" fill="${c[3]}"/> <!-- South -->
+                        <polygon points="0,0 0,100 50,50" fill="${c[2]}"/> <!-- West -->
                     </g>
                 </svg>`;
             },
             pawn: (color) => {
                  const isW = color === 'white';
-                 const c = isW ? ['#FFFFFF', '#CCCCCC', '#BBBBBB', '#999999'] : ['#999999', '#444444', '#555555', '#000000'];
+                 const c = isW ? ['#FFFFFF', '#EAEAEA', '#C0C0C0', '#707070'] : ['#999999', '#666666', '#444444', '#111111'];
                  return `<svg class="piece-svg pawn-svg" viewBox="0 0 100 100">
+                    <!-- RESET PAWN: Square Pyramid (Not Diamond) -->
                     <polygon points="0,0 100,0 50,50" fill="${c[0]}"/>
-                    <polygon points="0,0 0,100 50,50" fill="${c[1]}"/>
-                    <polygon points="100,0 100,100 50,50" fill="${c[2]}"/>
+                    <polygon points="100,0 100,100 50,50" fill="${c[1]}"/>
                     <polygon points="0,100 100,100 50,50" fill="${c[3]}"/>
+                    <polygon points="0,0 0,100 50,50" fill="${c[2]}"/>
                  </svg>`;
             }
         };
+
+        /* --- HOISTED TACTICAL FUNCTIONS --- */
+
+        function triggerParticles(squareElement, color) {
+            const shell = el('board-shell'); if (!shell || !squareElement) return;
+            const rect = squareElement.getBoundingClientRect(), sRect = shell.getBoundingClientRect();
+            const centerX = rect.left - sRect.left + rect.width / 2, centerY = rect.top - sRect.top + rect.height / 2;
+            const particleColor = color === 'black' ? '#444' : '#FFF';
+            for (let i = 0; i < 15; i++) {
+                const p = document.createElement('div'); p.className = 'particle'; 
+                p.style.left = centerX + 'px'; p.style.top = centerY + 'px';
+                p.style.background = particleColor;
+                const a = Math.random() * Math.PI * 2, v = 80 + Math.random() * 150;
+                p.style.setProperty('--dx', `${Math.cos(a) * v}px`); p.style.setProperty('--dy', `${Math.sin(a) * v}px`);
+                p.style.animation = `particleFly 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards`; 
+                shell.appendChild(p); setTimeout(() => p.remove(), 1200);
+            }
+            shell.classList.add('impact-shake'); setTimeout(() => shell.classList.remove('impact-shake'), 300);
+        }
+
+        function onCardClick(e) {
+            if (isAnimating || !isPlayerTurn) return;
+            const cardId = e.currentTarget.id; if (runCardsUsed[cardId]) return;
+            if (activeCard === cardId) { activeCard = null; e.currentTarget.classList.remove('selected'); } 
+            else { 
+                document.querySelectorAll('.ability-card').forEach(c => c.classList.remove('selected')); 
+                activeCard = cardId; e.currentTarget.classList.add('selected'); 
+            }
+            if(selectedPiece) selectPiece(selectedPiece.r, selectedPiece.c);
+        }
+
+        async function onSquareClick(e) {
+            if (isGameOver || !isPlayerTurn || isAnimating) return;
+            const r = parseInt(e.currentTarget.dataset.row), c = parseInt(e.currentTarget.dataset.col);
+            const p = board[r][c];
+            if (selectedPiece) {
+                if (selectedPiece.r === r && selectedPiece.c === c) { deselectPiece(); return; }
+                const fR = selectedPiece.r, fC = selectedPiece.c;
+                let currentValid = [...validMoves];
+                if (activeCard === 'card-knights-leap') currentValid.push(...getKnightLeapMoves(fR, fC, board[fR][fC].color));
+                if (activeCard === 'card-phase-shift') currentValid = getPhaseShiftMoves();
+                const move = currentValid.find(m => m.r === r && m.c === c);
+                if (move) {
+                    deselectPiece(); await movePiece(fR, fC, r, c, move.isSwap);
+                    if (activeCard) { runCardsUsed[activeCard] = true; activeCard = null; document.querySelectorAll('.ability-card').forEach(c => c.classList.remove('selected')); updateRunUI(); }
+                    switchPlayer();
+                } else if (p && p.color === currentPlayer) selectPiece(r, c);
+                else deselectPiece();
+            } else if (p && p.color === currentPlayer) selectPiece(r, c);
+        }
+
+        async function movePiece(fR, fC, tR, tC, swap = false) {
+            isAnimating = true;
+            const fSq = document.querySelector(`[data-row='${fR}'][data-col='${fC}']`), tSq = document.querySelector(`[data-row='${tR}'][data-col='${tC}']`);
+            const p = board[fR][fC];
+            const pEl = fSq ? fSq.querySelector('.piece-svg') : null, tP = (board[tR] && board[tR][tC]) ? board[tR][tC] : null;
+            if (pEl) { pEl.classList.remove('piece-entrance'); pEl.style.animation = 'none'; void pEl.offsetWidth; fSq.style.zIndex = "1000"; }
+            if (tP && !swap && tSq) { setTimeout(() => { const victimPieceEl = tSq.querySelector('.piece-svg'); if (victimPieceEl) victimPieceEl.style.display = 'none'; triggerParticles(tSq, tP.color); }, 400); }
+            if (pEl && fSq && tSq) {
+                const fRct = fSq.getBoundingClientRect(), tRct = tSq.getBoundingClientRect();
+                pEl.style.cssText += `transition:transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);z-index:1000;transform:translate(${tRct.left - fRct.left}px, ${tRct.top - fRct.top}px);`;
+                await new Promise(res => setTimeout(res, 470));
+            }
+            if (swap) { const p1 = board[fR][fC], p2 = board[tR][tC]; board[tR][tC] = p1; board[fR][fC] = p2; commanderSwapUsed[currentPlayer] = true; } 
+            else { const target = board[tR][tC]; if (target) { currentPlayer === 'white' ? capturedByWhite.push(target) : capturedByBlack.push(target); renderCapturedPieces(); if (target.piece === 'commander') isGameOver = true; } board[tR][tC] = p; board[fR][fC] = null; }
+
+            if (!swap && p.piece === 'pawn' && ((p.color === 'white' && tR === 0) || (p.color === 'black' && tR === 4))) {
+                if (p.color === 'white') { const choice = await promptPromotion(); board[tR][tC].piece = choice; board[tR][tC].svg = PIECES_SVG[choice]('white'); }
+                else { board[tR][tC].piece = 'guardian'; board[tR][tC].svg = PIECES_SVG.guardian('black'); }
+            }
+            if (fSq) fSq.style.zIndex = ""; renderBoard(); isAnimating = false;
+        }
+
+        async function promptPromotion() {
+            return new Promise(resolve => {
+                const modal = el('promotion-modal'); modal.classList.add('visible');
+                el('promo-guardian-icon').innerHTML = PIECES_SVG.guardian('white');
+                el('promo-assassin-icon').innerHTML = PIECES_SVG.assassin('white');
+                const handleChoice = (choice) => { modal.classList.remove('visible'); resolve(choice); };
+                el('promote-guardian').onclick = () => handleChoice('guardian');
+                el('promote-assassin').onclick = () => handleChoice('assassin');
+            });
+        }
 
         function updateRunUI() {
             if (el('challenger-label')) el('challenger-label').textContent = tierTitles[currentStage];
@@ -397,11 +494,8 @@
         }
 
         function drawIndicators() {
-            const passiveSvg = el('move-overlay'), activeSvg = el('active-move-overlay');
-            if(!passiveSvg || !activeSvg) return;
-            passiveSvg.innerHTML = ''; activeSvg.innerHTML = '';
-            const radius = 1.25;
-
+            const activeSvg = el('active-move-overlay'); if(!activeSvg) return;
+            activeSvg.innerHTML = '';
             if (selectedPiece) {
                 const activeRadius = 1.8;
                 const p = board[selectedPiece.r][selectedPiece.c];
@@ -411,9 +505,8 @@
                     if (activeCard === 'card-knights-leap') extraMoves = getKnightLeapMoves(selectedPiece.r, selectedPiece.c, p.color);
                     else if (activeCard === 'card-phase-shift') extraMoves = getPhaseShiftMoves();
                     [...standardMoves, ...extraMoves].forEach(m => {
-                        const x2 = 10 + m.c * 20, y2 = 10 + m.r * 20;
                         const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                        dot.setAttribute("cx", x2); dot.setAttribute("cy", y2); dot.setAttribute("r", activeRadius);
+                        dot.setAttribute("cx", 10 + m.c * 20); dot.setAttribute("cy", 10 + m.r * 20); dot.setAttribute("r", activeRadius);
                         dot.setAttribute("class", "move-dot active");
                         activeSvg.appendChild(dot);
                     });
@@ -421,11 +514,18 @@
             }
         }
 
+        function calculateCommanderDanger() {
+            const danger = [];
+            const wCmd = findPiece('commander', 'white');
+            const bCmd = findPiece('commander', 'black');
+            if (wCmd && isSquareAttacked(wCmd.r, wCmd.c, 'black')) danger.push(wCmd);
+            if (bCmd && isSquareAttacked(bCmd.r, bCmd.c, 'white')) danger.push(bCmd);
+            return danger;
+        }
+
         function renderBoard(animateEntrance = false) {
             const boardElement = el('chess-board'); if (!boardElement) return;
             boardElement.innerHTML = '';
-            
-            // Re-inject overlays (SVGs must come before squares in order to maintain grid anchoring, but are elevated via z-index in CSS)
             const passOverlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
             passOverlay.id = "move-overlay"; passOverlay.setAttribute("viewBox", "0 0 100 100"); passOverlay.setAttribute("preserveAspectRatio", "none");
             boardElement.appendChild(passOverlay);
@@ -434,19 +534,22 @@
             boardElement.appendChild(activeOverlay);
 
             const danger = calculateCommanderDanger();
+
             for (let r = 0; r < 5; r++) {
                 for (let c = 0; c < 5; c++) {
                     const sq = document.createElement('div');
                     sq.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
                     sq.dataset.row = r; sq.dataset.col = c;
                     sq.style.gridArea = `${r+1} / ${c+1} / ${r+2} / ${c+2}`;
+                    
+                    if (selectedPiece && selectedPiece.r === r && selectedPiece.c === c) sq.classList.add('selected');
+                    if (danger.some(d => d.r === r && d.c === c)) sq.classList.add('in-danger');
+
                     if (board[r] && board[r][c]) {
                         const wrapper = document.createElement('div'); wrapper.className = 'piece-wrapper';
                         wrapper.innerHTML = board[r][c].svg;
                         const svgEl = wrapper.querySelector('svg');
-                        if (svgEl && animateEntrance) {
-                            svgEl.classList.add('piece-entrance'); svgEl.style.animationDelay = `${(r * 5 + c) * 0.03}s`;
-                        }
+                        if (svgEl && animateEntrance) { svgEl.classList.add('piece-entrance'); svgEl.style.animationDelay = `${(r * 5 + c) * 0.03}s`; }
                         sq.appendChild(wrapper);
                     }
                     boardElement.appendChild(sq);
@@ -474,7 +577,7 @@
             currentPlayer = 'white'; selectedPiece = null; validMoves = []; isGameOver = false; isPlayerTurn = true;
             commanderSwapUsed = { white: false, black: false }; capturedByWhite = []; capturedByBlack = [];
             activeCard = null;
-            if (currentStage === 3) { runCardsUsed = {}; } 
+            if (currentStage === 3) runCardsUsed = {}; 
             renderBoard(true); renderCapturedPieces(); updateRunUI(); updateStatus();
             if (el('next-challenger-overlay')) el('next-challenger-overlay').classList.remove('visible'); 
             if (el('game-over-modal')) el('game-over-modal').classList.remove('visible');
@@ -496,71 +599,6 @@
                 const mainLayout = el('main-layout'); if (mainLayout) { mainLayout.classList.add('visible'); mainLayout.classList.remove('hidden'); }
                 initializeStage();
             }, 800);
-        }
-
-        function transitionToNextStage() {
-            const shell = el('board-container'); if (shell) shell.classList.add('slide-out-left');
-            setTimeout(() => {
-                currentStage++; initializeStage(); 
-                if (shell) { shell.style.transition = 'none'; shell.classList.remove('slide-out-left'); shell.classList.add('slide-in-right'); shell.offsetHeight; shell.style.transition = ''; shell.classList.remove('slide-in-right'); shell.classList.add('slide-to-center'); setTimeout(() => shell.classList.remove('slide-to-center'), 600); }
-            }, 600);
-        }
-
-        function onCardClick(e) {
-            if (isAnimating || !isPlayerTurn) return;
-            const cardId = e.currentTarget.id; if (runCardsUsed[cardId]) return;
-            if (activeCard === cardId) { activeCard = null; e.currentTarget.classList.remove('selected'); } 
-            else { document.querySelectorAll('.ability-card').forEach(c => c.classList.remove('selected')); activeCard = cardId; e.currentTarget.classList.add('selected'); }
-            if(selectedPiece) selectPiece(selectedPiece.r, selectedPiece.c);
-        }
-
-        async function onSquareClick(e) {
-            if (isGameOver || !isPlayerTurn || isAnimating) return;
-            const r = parseInt(e.currentTarget.dataset.row), c = parseInt(e.currentTarget.dataset.col);
-            const p = (board[r] && board[r][c]) ? board[r][c] : null;
-            if (selectedPiece) {
-                if (selectedPiece.r === r && selectedPiece.c === c) { deselectPiece(); return; }
-                const fR = selectedPiece.r, fC = selectedPiece.c;
-                let currentValid = [...validMoves];
-                if (activeCard === 'card-knights-leap') currentValid.push(...getKnightLeapMoves(fR, fC, board[fR][fC].color));
-                if (activeCard === 'card-phase-shift') currentValid = getPhaseShiftMoves();
-                const move = currentValid.find(m => m.r === r && m.c === c);
-                if (move) {
-                    deselectPiece(); await movePiece(fR, fC, r, c, move.isSwap);
-                    if (activeCard) { runCardsUsed[activeCard] = true; activeCard = null; document.querySelectorAll('.ability-card').forEach(c => c.classList.remove('selected')); updateRunUI(); }
-                    switchPlayer();
-                } else if (p && p.color === currentPlayer) selectPiece(r, c);
-                else deselectPiece();
-            } else if (p && p.color === currentPlayer) selectPiece(r, c);
-        }
-
-        async function movePiece(fR, fC, tR, tC, swap = false) {
-            isAnimating = true;
-            const fSq = document.querySelector(`[data-row='${fR}'][data-col='${fC}']`), tSq = document.querySelector(`[data-row='${tR}'][data-col='${tC}']`);
-            const pEl = fSq ? fSq.querySelector('.piece-svg') : null, tP = (board[tR] && board[tR][tC]) ? board[tR][tC] : null;
-            if (pEl) { pEl.classList.remove('piece-entrance'); pEl.style.animation = 'none'; void pEl.offsetWidth; fSq.style.zIndex = "1000"; }
-            if (tP && !swap && tSq) { setTimeout(() => { const victimPieceEl = tSq.querySelector('.piece-svg'); if (victimPieceEl) victimPieceEl.style.display = 'none'; triggerParticles(tSq, tP.color); }, 400); }
-            if (pEl && fSq && tSq) {
-                const fRct = fSq.getBoundingClientRect(), tRct = tSq.getBoundingClientRect();
-                pEl.style.cssText += `transition:transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);z-index:1000;transform:translate(${tRct.left - fRct.left}px, ${tRct.top - fRct.top}px);`;
-                await new Promise(res => setTimeout(res, 470));
-            }
-            if (swap) { const p1 = board[fR][fC], p2 = board[tR][tC]; board[tR][tC] = p1; board[fR][fC] = p2; commanderSwapUsed[currentPlayer] = true; } 
-            else { const p = board[fR][fC], target = board[tR][tC]; if (target) { currentPlayer === 'white' ? capturedByWhite.push(target) : capturedByBlack.push(target); renderCapturedPieces(); if (target.piece === 'commander') isGameOver = true; } board[tR][tC] = p; board[fR][fC] = null; }
-            if (fSq) fSq.style.zIndex = ""; renderBoard(); isAnimating = false;
-        }
-
-        function triggerParticles(squareElement, color) {
-            const shell = el('board-shell'); if (!shell || !squareElement) return;
-            const rect = squareElement.getBoundingClientRect(), sRect = shell.getBoundingClientRect();
-            const centerX = rect.left - sRect.left + rect.width / 2, centerY = rect.top - sRect.top + rect.height / 2;
-            const particleColor = color === 'black' ? '#444' : '#FFF';
-            for (let i = 0; i < 15; i++) {
-                const p = document.createElement('div'); p.className = 'particle'; p.style.left = centerX + 'px'; p.style.top = centerY + 'px'; p.style.background = particleColor;
-                const a = Math.random() * Math.PI * 2, v = 80 + Math.random() * 150; p.style.setProperty('--dx', `${Math.cos(a) * v}px`); p.style.setProperty('--dy', `${Math.sin(a) * v}px`);
-                p.style.animation = `particleFly 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards`; shell.appendChild(p); setTimeout(() => p.remove(), 1200);
-            }
-            shell.classList.add('impact-shake'); setTimeout(() => shell.classList.remove('impact-shake'), 300);
         }
 
         function selectPiece(r, c) { deselectPiece(); selectedPiece = { r, c }; const p = board[r][c]; if (!p) return; validMoves = getValidMoves(p, r, c); if (activeCard === 'card-knights-leap') validMoves.push(...getKnightLeapMoves(r, c, p.color)); if (activeCard === 'card-phase-shift') validMoves = getPhaseShiftMoves(); highlightSquares(); drawIndicators(); }
@@ -591,6 +629,14 @@
             else move = minimaxRoot(currentStage === 3 ? 4 : 3, board, 'black');
             if (move) await movePiece(move.from.r, move.from.c, move.to.r, move.to.c, move.to.isSwap);
             switchPlayer();
+        }
+
+        function transitionToNextStage() {
+            const shell = el('board-container'); if (shell) shell.classList.add('slide-out-left');
+            setTimeout(() => {
+                currentStage++; initializeStage(); 
+                if (shell) { shell.style.transition = 'none'; shell.classList.remove('slide-out-left'); shell.classList.add('slide-in-right'); shell.offsetHeight; shell.style.transition = ''; shell.classList.remove('slide-in-right'); shell.classList.add('slide-to-center'); setTimeout(() => shell.classList.remove('slide-to-center'), 600); }
+            }, 600);
         }
 
         function renderCapturedPieces() {
