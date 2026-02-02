@@ -89,12 +89,16 @@
         .progress-line { height: 1.5px; width: 32px; background: rgba(255, 255, 255, 0.1); flex-shrink: 0; }
         .progress-line.filled { background: #fff; box-shadow: 0 0 8px #fff; }
 
+        /* Grandmaster series dots matched to Aether #FF0066 */
         .boss-series-box {
             border: 1.5px solid #FF0066; border-radius: 20px; padding: 4px 8px; display: flex; gap: 8px;
             box-shadow: 0 0 10px rgba(255, 0, 102, 0.4); margin-left: 8px; background: rgba(255, 0, 102, 0.05); flex-shrink: 0;
+            cursor: pointer;
+            transition: 0.3s;
         }
+        .boss-series-box:hover { background: rgba(255, 0, 102, 0.15); filter: brightness(1.2); }
         .dot-boss { width: 10px; height: 10px; border-radius: 50%; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); transition: 0.4s; }
-        .dot-boss.win { background: #ff4d94; box-shadow: 0 0 10px #ff4d94; border-color: #ff4d94; }
+        .dot-boss.win { background: #FF0066; box-shadow: 0 0 10px #FF0066; border-color: #FF0066; }
         .dot-boss.loss { background: #000; border-color: #444; }
 
         /* GRID GEOMETRY LOCK & VERTICAL SIDEBAR LOCK */
@@ -180,7 +184,7 @@
         }
         .captured-piece-svg { width: 52px; height: 52px; margin: 0; display: flex; align-items: center; justify-content: center; opacity: 0.8; }
 
-        /* Premium Transitions */
+        /* Premium Buttons */
         .btn-premium {
             background: linear-gradient(#1c1c1e, #1c1c1e) padding-box, linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.05) 100%) border-box;
             border: 1.5px solid transparent; border-radius: 1.5rem; cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,0.4); transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
@@ -198,14 +202,19 @@
         .modal-backdrop.visible { opacity: 1; visibility: visible; }
         .modal-content { background: linear-gradient(#1c1c1e, #1c1c1e) padding-box, linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.05) 100%) border-box; border: 1.5px solid transparent; padding: 3rem; border-radius: 2.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 2rem; }
 
-        /* Promotion Modal */
-        .promotion-option { width: 120px; height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: 0.3s; }
-        .promotion-option:hover { transform: translateY(-5px); filter: drop-shadow(0 0 15px white); }
-        .promotion-option svg { width: 70px; height: 70px; }
-
-        .particle { position: absolute; width: 6px; height: 6px; background: #fff; box-shadow: 0 0 10px #fff; border-radius: 1px; pointer-events: none; z-index: 1000; opacity: 0; }
-        @keyframes particleFly { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(0) rotate(360deg); opacity: 0; } }
-        .impact-shake { animation: boardImpact 0.3s cubic-bezier(.36,.07,.19,.97) both; }
+        /* DIRECTIONAL TRIANGULAR PARTICLES - EASE OUT PHYSICS */
+        .particle { 
+            position: absolute; width: 10px; height: 10px; 
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            pointer-events: none; z-index: 1000; opacity: 0; 
+        }
+        @keyframes particleFly { 
+            0% { transform: translate(0, 0) scale(1.8) rotate(var(--start-rot)); opacity: 0.75; } 
+            70% { transform: translate(var(--dx), var(--dy)) scale(0.6) rotate(var(--mid-rot)); opacity: 0.75; }
+            100% { transform: translate(var(--dx), var(--dy)) scale(0) rotate(var(--end-rot)); opacity: 0; }
+        }
+        .impact-shake { animation: boardImpact 0.25s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes boardImpact { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(4px, -2px); } 50% { transform: translate(-4px, 2px); } 75% { transform: translate(2px, 2px); } }
     </style>
 </head>
 <body>
@@ -222,7 +231,7 @@
 
     <div id="main-layout" class="hidden">
         
-        <!-- Left Overview Panel -->
+        <!-- Left Overview Sidebar -->
         <div id="left-info-panel">
             <h1 id="aether-title" class="title-font text-5xl">AETHER</h1>
             <p id="challenger-label" class="title-font uppercase tracking-widest">The Apprentice</p>
@@ -235,7 +244,7 @@
                     <div class="progress-line" id="line-1"></div>
                     <div class="dot" id="dot-2"></div>
                     
-                    <div class="boss-series-box">
+                    <div id="debug-skip-boss" class="boss-series-box" title="Debug: Skip to Boss Level">
                         <div class="dot-boss" id="boss-match-0"></div>
                         <div class="dot-boss" id="boss-match-1"></div>
                         <div class="dot-boss" id="boss-match-2"></div>
@@ -261,7 +270,7 @@
                     </button>
                 </div>
 
-                <!-- SIDEBAR pieces absolutely anchored to Board Shell -->
+                <!-- SIDEBAR pieces absolutely anchored -->
                 <div id="right-captured-panel">
                     <div class="captured-column">
                         <div id="black-captured-pieces" class="flex flex-col gap-1 items-center min-h-[10px]"></div>
@@ -291,7 +300,18 @@
         <button id="quit-button" title="Quit Challenge" class="btn-premium px-6 py-2 fixed bottom-8 left-8 text-xs">QUIT</button>
     </div>
 
-    <!-- Promotion Modal -->
+    <!-- Confirmation Modals -->
+    <div id="skip-boss-modal" class="modal-backdrop">
+        <div class="modal-content">
+            <h2 class="title-font text-white uppercase text-xl">Tactical Override</h2>
+            <p class="text-sm font-thin text-white/60 -mt-4 uppercase tracking-[0.2em]">Initialize Boss Sequence?</p>
+            <div class="flex gap-4">
+                <button id="skip-boss-confirm" class="btn-premium px-8 py-3 title-font text-xs uppercase tracking-widest">Confirm</button>
+                <button id="skip-boss-cancel" class="btn-premium px-8 py-3 title-font text-xs uppercase tracking-widest opacity-60">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <div id="promotion-modal" class="modal-backdrop">
         <div class="modal-content">
             <h2 class="title-font text-white uppercase text-xl">Unit Promotion</h2>
@@ -345,82 +365,59 @@
                 </svg>`;
             },
             guardian: (color) => {
-                const isW = color === 'white';
-                const c = isW ? ['#FFFFFF', '#CCCCCC', '#BBBBBB', '#999999'] : ['#999999', '#666666', '#444444', '#111111'];
+                const isW = color === 'white', c = isW ? ['#FFFFFF', '#CCCCCC', '#BBBBBB', '#999999'] : ['#999999', '#666666', '#444444', '#111111'];
                 return `<svg class="piece-svg guardian-svg" viewBox="0 0 100 100">
-                    <polygon points="0,0 100,0 80,20 20,20" fill="${c[0]}"/>
-                    <polygon points="0,0 20,20 20,80 0,100" fill="${c[1]}"/>
-                    <polygon points="100,0 80,20 80,80 100,100" fill="${c[2]}"/>
-                    <polygon points="0,100 100,100 80,80 20,80" fill="${c[3]}"/>
-                    <rect x="20" y="20" width="60" height="60" fill="${c[1]}" />
-                    <!-- RESET CORE: Square Pyramid (Not Diamond) -->
-                    <g transform="translate(35, 35) scale(0.3)">
-                        <polygon points="0,0 100,0 50,50" fill="${c[0]}"/> <!-- North -->
-                        <polygon points="100,0 100,100 50,50" fill="${c[1]}"/> <!-- East -->
-                        <polygon points="0,100 100,100 50,50" fill="${c[3]}"/> <!-- South -->
-                        <polygon points="0,0 0,100 50,50" fill="${c[2]}"/> <!-- West -->
-                    </g>
+                    <polygon points="0,0 100,0 80,20 20,20" fill="${c[0]}"/><polygon points="0,0 20,20 20,80 0,100" fill="${c[1]}"/><polygon points="100,0 80,20 80,80 100,100" fill="${c[2]}"/><polygon points="0,100 100,100 80,80 20,80" fill="${c[3]}"/><rect x="20" y="20" width="60" height="60" fill="${c[1]}" />
+                    <g transform="translate(35, 35) scale(0.3)"><polygon points="0,0 100,0 50,50" fill="${c[0]}"/><polygon points="100,0 100,100 50,50" fill="${c[1]}"/><polygon points="0,100 100,100 50,50" fill="${c[3]}"/><polygon points="0,0 0,100 50,50" fill="${c[2]}"/></g>
                 </svg>`;
             },
             assassin: (color) => {
-                const isW = color === 'white';
-                const c = isW ? ['#FFFFFF', '#EAEAEA', '#C0C0C0', '#707070'] : ['#999999', '#666666', '#444444', '#111111'];
+                const isW = color === 'white', c = isW ? ['#FFFFFF', '#EAEAEA', '#C0C0C0', '#707070'] : ['#999999', '#666666', '#444444', '#111111'];
                 return `<svg class="piece-svg assassin-svg" viewBox="0 0 100 100">
-                    <!-- Base Pyramid (Rotated 45 Deg Diamond) -->
-                    <polygon points="50,0 50,50 0,50" fill="${c[0]}"/>   <!-- NW face -->
-                    <polygon points="50,0 100,50 50,50" fill="${c[1]}"/> <!-- NE face -->
-                    <polygon points="0,50 50,50 50,100" fill="${c[2]}"/> <!-- SW face -->
-                    <polygon points="100,50 50,100 50,50" fill="${c[3]}"/> <!-- SE face (Dark South East side) -->
-                    
-                    <!-- Center Layer (Guardian center scale/shape - SQUARE ORIENTATION) -->
-                    <g transform="translate(35, 35) scale(0.3)">
-                        <polygon points="0,0 100,0 50,50" fill="${c[0]}"/> <!-- North -->
-                        <polygon points="100,0 100,100 50,50" fill="${c[1]}"/> <!-- East -->
-                        <polygon points="0,100 100,100 50,50" fill="${c[3]}"/> <!-- South -->
-                        <polygon points="0,0 0,100 50,50" fill="${c[2]}"/> <!-- West -->
-                    </g>
+                    <polygon points="50,0 50,50 0,50" fill="${c[0]}"/><polygon points="50,0 100,50 50,50" fill="${c[1]}"/><polygon points="0,50 50,50 50,100" fill="${c[2]}"/><polygon points="100,50 50,100 50,50" fill="${c[3]}"/>
+                    <g transform="translate(35, 35) scale(0.3)"><polygon points="0,0 100,0 50,50" fill="${c[0]}"/><polygon points="100,0 100,100 50,50" fill="${c[1]}"/><polygon points="0,100 100,100 50,50" fill="${c[3]}"/><polygon points="0,0 0,100 50,50" fill="${c[2]}"/></g>
                 </svg>`;
             },
             pawn: (color) => {
-                 const isW = color === 'white';
-                 const c = isW ? ['#FFFFFF', '#EAEAEA', '#C0C0C0', '#707070'] : ['#999999', '#666666', '#444444', '#111111'];
+                 const isW = color === 'white', c = isW ? ['#FFFFFF', '#EAEAEA', '#C0C0C0', '#707070'] : ['#999999', '#666666', '#444444', '#111111'];
                  return `<svg class="piece-svg pawn-svg" viewBox="0 0 100 100">
-                    <!-- RESET PAWN: Square Pyramid (Not Diamond) -->
-                    <polygon points="0,0 100,0 50,50" fill="${c[0]}"/>
-                    <polygon points="100,0 100,100 50,50" fill="${c[1]}"/>
-                    <polygon points="0,100 100,100 50,50" fill="${c[3]}"/>
-                    <polygon points="0,0 0,100 50,50" fill="${c[2]}"/>
+                    <polygon points="0,0 100,0 50,50" fill="${c[0]}"/><polygon points="100,0 100,100 50,50" fill="${c[1]}"/><polygon points="0,100 100,100 50,50" fill="${c[3]}"/><polygon points="0,0 0,100 50,50" fill="${c[2]}"/>
                  </svg>`;
             }
         };
 
-        /* --- HOISTED TACTICAL FUNCTIONS --- */
+        /* --- SPORADIC DIRECTIONAL PARTICLE ENGINE --- */
 
-        function triggerParticles(squareElement, color) {
+        function triggerParticles(squareElement, capturedPieceColor, dR, dC) {
             const shell = el('board-shell'); if (!shell || !squareElement) return;
             const rect = squareElement.getBoundingClientRect(), sRect = shell.getBoundingClientRect();
             const centerX = rect.left - sRect.left + rect.width / 2, centerY = rect.top - sRect.top + rect.height / 2;
-            const particleColor = color === 'black' ? '#444' : '#FFF';
-            for (let i = 0; i < 15; i++) {
+            const baseAngle = Math.atan2(dR, dC); 
+            const colors = ['#FFF', '#CCC', '#888', '#444', '#000'];
+            for (let i = 0; i < 40; i++) {
                 const p = document.createElement('div'); p.className = 'particle'; 
                 p.style.left = centerX + 'px'; p.style.top = centerY + 'px';
-                p.style.background = particleColor;
-                const a = Math.random() * Math.PI * 2, v = 80 + Math.random() * 150;
-                p.style.setProperty('--dx', `${Math.cos(a) * v}px`); p.style.setProperty('--dy', `${Math.sin(a) * v}px`);
-                p.style.animation = `particleFly 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards`; 
-                shell.appendChild(p); setTimeout(() => p.remove(), 1200);
+                p.style.background = colors[Math.floor(Math.random() * colors.length)];
+                const isRandom = Math.random() < 0.3;
+                const angle = isRandom ? (Math.random() * Math.PI * 2) : (baseAngle + (Math.random() - 0.5) * 1.5); 
+                const velocity = isRandom ? (40 + Math.random() * 120) : (100 + Math.random() * 250);
+                p.style.setProperty('--dx', `${Math.cos(angle) * velocity}px`); 
+                p.style.setProperty('--dy', `${Math.sin(angle) * velocity}px`);
+                p.style.setProperty('--start-rot', `${Math.random() * 360}deg`);
+                p.style.setProperty('--mid-rot', `${Math.random() * 720}deg`);
+                p.style.setProperty('--end-rot', `${Math.random() * 1440}deg`);
+                p.style.animation = `particleFly ${1.2 + Math.random() * 0.8}s cubic-bezier(0.1, 0.9, 0.2, 1) forwards`; 
+                shell.appendChild(p); setTimeout(() => p.remove(), 2500);
             }
-            shell.classList.add('impact-shake'); setTimeout(() => shell.classList.remove('impact-shake'), 300);
+            shell.classList.add('impact-shake'); setTimeout(() => shell.classList.remove('impact-shake'), 200);
         }
 
+        /* --- GAME ENGINE --- */
         function onCardClick(e) {
             if (isAnimating || !isPlayerTurn) return;
             const cardId = e.currentTarget.id; if (runCardsUsed[cardId]) return;
             if (activeCard === cardId) { activeCard = null; e.currentTarget.classList.remove('selected'); } 
-            else { 
-                document.querySelectorAll('.ability-card').forEach(c => c.classList.remove('selected')); 
-                activeCard = cardId; e.currentTarget.classList.add('selected'); 
-            }
+            else { document.querySelectorAll('.ability-card').forEach(c => c.classList.remove('selected')); activeCard = cardId; e.currentTarget.classList.add('selected'); }
             if(selectedPiece) selectPiece(selectedPiece.r, selectedPiece.c);
         }
 
@@ -431,6 +428,7 @@
             if (selectedPiece) {
                 if (selectedPiece.r === r && selectedPiece.c === c) { deselectPiece(); return; }
                 const fR = selectedPiece.r, fC = selectedPiece.c;
+                if (!board[fR] || !board[fR][fC]) return;
                 let currentValid = [...validMoves];
                 if (activeCard === 'card-knights-leap') currentValid.push(...getKnightLeapMoves(fR, fC, board[fR][fC].color));
                 if (activeCard === 'card-phase-shift') currentValid = getPhaseShiftMoves();
@@ -449,17 +447,21 @@
             const fSq = document.querySelector(`[data-row='${fR}'][data-col='${fC}']`), tSq = document.querySelector(`[data-row='${tR}'][data-col='${tC}']`);
             const p = board[fR][fC];
             const pEl = fSq ? fSq.querySelector('.piece-svg') : null, tP = (board[tR] && board[tR][tC]) ? board[tR][tC] : null;
-            if (pEl) { pEl.classList.remove('piece-entrance'); pEl.style.animation = 'none'; void pEl.offsetWidth; fSq.style.zIndex = "1000"; }
-            if (tP && !swap && tSq) { setTimeout(() => { const victimPieceEl = tSq.querySelector('.piece-svg'); if (victimPieceEl) victimPieceEl.style.display = 'none'; triggerParticles(tSq, tP.color); }, 400); }
+            if (pEl) {
+                pEl.style.transition = 'none'; pEl.style.transform = 'translate(0, 0)'; pEl.classList.remove('piece-entrance');
+                void pEl.offsetWidth; fSq.style.zIndex = "1000"; pEl.style.transition = 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)';
+            }
+            if (tP && !swap && tSq) {
+                setTimeout(() => { const victimPieceEl = tSq.querySelector('.piece-svg'); if (victimPieceEl) victimPieceEl.style.display = 'none'; triggerParticles(tSq, tP.color, tR - fR, tC - fC); }, 200); 
+            }
             if (pEl && fSq && tSq) {
                 const fRct = fSq.getBoundingClientRect(), tRct = tSq.getBoundingClientRect();
-                pEl.style.cssText += `transition:transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);z-index:1000;transform:translate(${tRct.left - fRct.left}px, ${tRct.top - fRct.top}px);`;
-                await new Promise(res => setTimeout(res, 470));
+                pEl.style.transform = `translate(${tRct.left - fRct.left}px, ${tRct.top - fRct.top}px)`;
+                await new Promise(res => setTimeout(res, 370));
             }
             if (swap) { const p1 = board[fR][fC], p2 = board[tR][tC]; board[tR][tC] = p1; board[fR][fC] = p2; commanderSwapUsed[currentPlayer] = true; } 
             else { const target = board[tR][tC]; if (target) { currentPlayer === 'white' ? capturedByWhite.push(target) : capturedByBlack.push(target); renderCapturedPieces(); if (target.piece === 'commander') isGameOver = true; } board[tR][tC] = p; board[fR][fC] = null; }
-
-            if (!swap && p.piece === 'pawn' && ((p.color === 'white' && tR === 0) || (p.color === 'black' && tR === 4))) {
+            if (!swap && p && p.piece === 'pawn' && ((p.color === 'white' && tR === 0) || (p.color === 'black' && tR === 4))) {
                 if (p.color === 'white') { const choice = await promptPromotion(); board[tR][tC].piece = choice; board[tR][tC].svg = PIECES_SVG[choice]('white'); }
                 else { board[tR][tC].piece = 'guardian'; board[tR][tC].svg = PIECES_SVG.guardian('black'); }
             }
@@ -507,8 +509,7 @@
                     [...standardMoves, ...extraMoves].forEach(m => {
                         const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                         dot.setAttribute("cx", 10 + m.c * 20); dot.setAttribute("cy", 10 + m.r * 20); dot.setAttribute("r", activeRadius);
-                        dot.setAttribute("class", "move-dot active");
-                        activeSvg.appendChild(dot);
+                        dot.setAttribute("class", "move-dot active"); activeSvg.appendChild(dot);
                     });
                 }
             }
@@ -516,8 +517,7 @@
 
         function calculateCommanderDanger() {
             const danger = [];
-            const wCmd = findPiece('commander', 'white');
-            const bCmd = findPiece('commander', 'black');
+            const wCmd = findPiece('commander', 'white'), bCmd = findPiece('commander', 'black');
             if (wCmd && isSquareAttacked(wCmd.r, wCmd.c, 'black')) danger.push(wCmd);
             if (bCmd && isSquareAttacked(bCmd.r, bCmd.c, 'white')) danger.push(bCmd);
             return danger;
@@ -526,28 +526,19 @@
         function renderBoard(animateEntrance = false) {
             const boardElement = el('chess-board'); if (!boardElement) return;
             boardElement.innerHTML = '';
-            const passOverlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            passOverlay.id = "move-overlay"; passOverlay.setAttribute("viewBox", "0 0 100 100"); passOverlay.setAttribute("preserveAspectRatio", "none");
-            boardElement.appendChild(passOverlay);
-            const activeOverlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            activeOverlay.id = "active-move-overlay"; activeOverlay.setAttribute("viewBox", "0 0 100 100"); activeOverlay.setAttribute("preserveAspectRatio", "none");
-            boardElement.appendChild(activeOverlay);
-
+            const passOverlay = document.createElementNS("http://www.w3.org/2000/svg", "svg"); passOverlay.id = "move-overlay"; passOverlay.setAttribute("viewBox", "0 0 100 100"); passOverlay.setAttribute("preserveAspectRatio", "none"); boardElement.appendChild(passOverlay);
+            const activeOverlay = document.createElementNS("http://www.w3.org/2000/svg", "svg"); activeOverlay.id = "active-move-overlay"; activeOverlay.setAttribute("viewBox", "0 0 100 100"); activeOverlay.setAttribute("preserveAspectRatio", "none"); boardElement.appendChild(activeOverlay);
             const danger = calculateCommanderDanger();
-
             for (let r = 0; r < 5; r++) {
                 for (let c = 0; c < 5; c++) {
                     const sq = document.createElement('div');
                     sq.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
                     sq.dataset.row = r; sq.dataset.col = c;
                     sq.style.gridArea = `${r+1} / ${c+1} / ${r+2} / ${c+2}`;
-                    
                     if (selectedPiece && selectedPiece.r === r && selectedPiece.c === c) sq.classList.add('selected');
                     if (danger.some(d => d.r === r && d.c === c)) sq.classList.add('in-danger');
-
                     if (board[r] && board[r][c]) {
-                        const wrapper = document.createElement('div'); wrapper.className = 'piece-wrapper';
-                        wrapper.innerHTML = board[r][c].svg;
+                        const wrapper = document.createElement('div'); wrapper.className = 'piece-wrapper'; wrapper.innerHTML = board[r][c].svg;
                         const svgEl = wrapper.querySelector('svg');
                         if (svgEl && animateEntrance) { svgEl.classList.add('piece-entrance'); svgEl.style.animationDelay = `${(r * 5 + c) * 0.03}s`; }
                         sq.appendChild(wrapper);
@@ -576,8 +567,7 @@
             board[1][3] = { piece: 'pawn', color: 'black', svg: PIECES_SVG.pawn('black') };
             currentPlayer = 'white'; selectedPiece = null; validMoves = []; isGameOver = false; isPlayerTurn = true;
             commanderSwapUsed = { white: false, black: false }; capturedByWhite = []; capturedByBlack = [];
-            activeCard = null;
-            if (currentStage === 3) runCardsUsed = {}; 
+            activeCard = null; if (currentStage === 3) runCardsUsed = {}; 
             renderBoard(true); renderCapturedPieces(); updateRunUI(); updateStatus();
             if (el('next-challenger-overlay')) el('next-challenger-overlay').classList.remove('visible'); 
             if (el('game-over-modal')) el('game-over-modal').classList.remove('visible');
@@ -622,13 +612,27 @@
         }
 
         async function makeComputerMove() {
-            let move; const dif = currentStage; const ms = getAllMoves(board, 'black');
+            const turnInfo = el('turn-info'); if (turnInfo) turnInfo.textContent = "Enemy Thinking...";
+            await new Promise(r => setTimeout(r, 50));
+            const ms = getAllMoves(board, 'black');
             if (ms.length === 0) { isGameOver = true; switchPlayer(); return; }
+            let move;
             if (currentStage === 0) move = ms[Math.floor(Math.random() * ms.length)];
             else if (currentStage === 1) { ms.sort((a, b) => ( (board[b.to.r] && board[b.to.r][b.to.c]) ? 1 : 0 ) - ( (board[a.to.r] && board[a.to.r][a.to.c]) ? 1 : 0 )); move = ms[0]; }
-            else move = minimaxRoot(currentStage === 3 ? 4 : 3, board, 'black');
+            else move = await asyncMinimaxRoot(currentStage === 3 ? 4 : 3, board, 'black');
+            await new Promise(r => setTimeout(r, 100));
             if (move) await movePiece(move.from.r, move.from.c, move.to.r, move.to.c, move.to.isSwap);
             switchPlayer();
+        }
+
+        async function asyncMinimaxRoot(d, cB, pC) {
+            const ms = getAllMoves(cB, pC); let bS = -Infinity, bM = null;
+            for (let i = 0; i < ms.length; i++) {
+                const m = ms[i]; const s = minimax(d - 1, getBoardAfterMove(cB, m), -Infinity, Infinity, false);
+                if (s > bS) { bS = s; bM = m; }
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
+            return bM;
         }
 
         function transitionToNextStage() {
@@ -647,10 +651,8 @@
             capturedByBlack.forEach(p => { const div = document.createElement('div'); div.className = 'captured-piece-svg'; div.innerHTML = p.svg; blackContainer.appendChild(div); });
         }
 
-        function calculateCommanderDanger() { const danger = [], wCmd = findPiece('commander', 'white'), bCmd = findPiece('commander', 'black'); if (wCmd && isSquareAttacked(wCmd.r, wCmd.c, 'black')) danger.push(wCmd); if (bCmd && isSquareAttacked(bCmd.r, bCmd.c, 'white')) danger.push(bCmd); return danger; }
         function findPiece(t, col) { for(let r=0; r<5; r++) for(let c=0; c<5; c++) if(board[r] && board[r][c] && board[r][c].piece === t && board[r][c].color === col) return {r, c}; return null; }
         function updateStatus() { const turnInfo = el('turn-info'); if (turnInfo) turnInfo.textContent = currentPlayer === 'white' ? "Your Turn" : "Enemy Thinking..."; }
-        function minimaxRoot(d, cB, pC) { const ms = getAllMoves(cB, pC); let bS = -Infinity, bM = null; for(const m of ms) { const s = minimax(d-1, getBoardAfterMove(cB, m), -Infinity, Infinity, false); if (s > bS) { bS = s; bM = m; } } return bM; }
         function minimax(d, cB, a, b, isM) { if (d === 0) return -evaluate(cB); const ms = getAllMoves(cB, isM ? 'black' : 'white'); if (isM) { let best = -Infinity; for (const m of ms) { best = Math.max(best, minimax(d-1, getBoardAfterMove(cB,m), a, b, false)); a = Math.max(a, best); if (b <= a) break; } return best; } else { let best = Infinity; for (const m of ms) { best = Math.min(best, minimax(d-1, getBoardAfterMove(cB,m), a, b, true)); b = Math.min(best, minimax(d-1, getBoardAfterMove(cB,m), a, b, true)); if (b <= a) break; } return best; } }
         function evaluate(b) { let s = 0; const v = { commander: 1000, guardian: 40, assassin: 40, pawn: 10 }; for (let r=0; r<5; r++) for (let c=0; c<5; c++) { const p = (b[r] && b[r][c]) ? b[r][c] : null; if (p) s += (p.color === 'white' ? v[p.piece] : -v[p.piece]); } return s; }
         function getAllMoves(b, col) { const ms = []; for (let r=0; r<5; r++) for (let c=0; c<5; c++) if (b[r] && b[r][c] && b[r][c].color === col) getValidMoves(b[r][c], r, c, b).forEach(m => ms.push({from: {r,c}, to: m})); return ms; }
@@ -693,9 +695,21 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             initShader(); 
-            if (el('start-challenge-btn')) el('start-challenge-btn').onclick = startRun;
-            if (el('quit-button')) el('quit-button').onclick = resetToMenu;
-            if (el('final-reset-btn')) el('final-reset-btn').onclick = resetToMenu; 
+            el('start-challenge-btn').onclick = startRun;
+            el('quit-button').onclick = resetToMenu;
+            el('final-reset-btn').onclick = resetToMenu; 
+
+            const bossBox = el('debug-skip-boss');
+            if (bossBox) {
+                bossBox.onclick = () => {
+                    const modal = el('skip-boss-modal'); modal.classList.add('visible');
+                    el('skip-boss-confirm').onclick = () => {
+                        modal.classList.remove('visible');
+                        currentStage = 3; bossResults = []; runCardsUsed = {}; initializeStage();
+                    };
+                    el('skip-boss-cancel').onclick = () => modal.classList.remove('visible');
+                };
+            }
         });
     </script>
 </body>
