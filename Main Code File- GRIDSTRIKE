@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GRIDSTRIKE</title>
+    <!-- Fonts: Syncopate for titles, Exo 2 for technical UI -->
     <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Exo+2:wght@100;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -13,13 +14,18 @@
             touch-action: manipulation;
             overflow: hidden;
             min-height: 100vh;
+            width: 100vw;
             color: white;
             margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
+        /* High-Contrast Aether Shader Background */
         #bg-canvas {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2;
-            display: block; filter: contrast(1.1) brightness(0.9);
+            display: block; filter: contrast(1.4) brightness(1.1);
         }
 
         .grain {
@@ -40,11 +46,17 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: -0.05em; 
+            font-size: 1.5rem; 
             transform: scaleX(1.1); 
             display: inline-block;
         }
 
-        #intro-screen { transition: opacity 0.8s ease, transform 0.8s ease, visibility 0.8s; background: black; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 200; position: fixed; inset: 0; }
+        #intro-screen {
+            transition: opacity 0.8s ease, transform 0.8s ease, visibility 0.8s;
+            background: transparent;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 200; position: fixed; inset: 0;
+        }
         #intro-screen.fade-out { opacity: 0; transform: scale(1.1); visibility: hidden; }
 
         #main-layout {
@@ -52,183 +64,177 @@
             display: flex; flex-direction: row; align-items: center; justify-content: center;
             width: 100%; height: 100vh; position: relative; gap: 4rem;
         }
-        #main-layout.hidden { opacity: 0; transform: translateY(20px); display: none; }
+        #main-layout.hidden { opacity: 0; transform: translateY(20px); display: none !important; }
         #main-layout.visible { opacity: 1; transform: translateY(0); display: flex; }
 
-        /* Left Info Panel (Floating) */
-        #left-panel {
-            display: flex; flex-direction: column; align-items: flex-end; /* Align right towards board */
-            text-align: right; gap: 2rem; width: 250px;
-        }
+        /* Progress HUD Architecture - Lines touch dots */
+        #progress-container { width: 100%; display: flex; flex-direction: column; align-items: flex-end; margin-top: 1rem; }
+        .progress-cluster { display: flex; align-items: center; gap: 0; position: relative; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, 0.2); transition: 0.4s; position: relative; z-index: 2; flex-shrink: 0; }
+        .dot.active { background: #fff; box-shadow: 0 0 12px #fff; border-color: #fff; }
+        
+        .progress-line { height: 1.5px; width: 32px; background: rgba(255, 255, 255, 0.1); flex-shrink: 0; }
+        .progress-line.filled { background: #fff; box-shadow: 0 0 8px #fff; }
 
-        /* Right Captured Panel */
-        #right-panel {
-            display: flex; flex-direction: column; justify-content: space-between;
-            height: 450px; width: 60px; padding-left: 16px; /* 16px padding from board */
+        .boss-series-box {
+            border: 1.5px solid #ff4d94;
+            border-radius: 20px;
+            padding: 4px 8px;
+            display: flex;
+            gap: 8px;
+            box-shadow: 0 0 10px rgba(255, 77, 148, 0.4);
+            margin-left: 12px;
+            background: rgba(255, 77, 148, 0.05);
+            flex-shrink: 0;
         }
-        .captured-column { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+        .dot-boss { width: 10px; height: 10px; border-radius: 50%; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); transition: 0.4s; }
+        .dot-boss.win { background: #ff4d94; box-shadow: 0 0 10px #ff4d94; border-color: #ff4d94; }
+        .dot-boss.loss { background: #000; border-color: #444; }
 
-        .board-wrapper { display: flex; flex-direction: column; align-items: center; gap: 2rem; z-index: 10; }
+        /* GRID GEOMETRY LOCK */
+        .board-wrapper { display: flex; flex-direction: column; align-items: center; gap: 2.5rem; z-index: 10; flex-shrink: 0; }
         .board-slider {
-            position: relative; width: 81vw; height: 81vw;
-            max-width: 450px; max-height: 450px;
-            overflow: hidden; border-radius: 12px;
+            position: relative; 
+            width: 81vw; 
+            height: 81vw;
+            max-width: 450px; 
+            max-height: 450px;
+            aspect-ratio: 1 / 1;
+            overflow: hidden; 
+            border-radius: 12px;
             box-shadow: 0 30px 60px rgba(0,0,0,0.8);
             background: rgba(255,255,255,0.02);
+            isolation: isolate;
+            flex-shrink: 0;
         }
-        .board-container { width: 100%; height: 100%; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1); position: relative; }
-        .slide-out-left { transform: translateX(-120%); }
-        .slide-in-right { transform: translateX(120%); transition: none !important; }
-        .slide-to-center { transform: translateX(0); }
-
-        .chess-board { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(5, 1fr); gap: 4px; width: 100%; height: 100%; }
+        .board-container { width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.6s ease; position: relative; }
         
-        .square {
-            display: flex; justify-content: center; align-items: center; position: relative;
-            border-radius: 4px; box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05), inset 0 -1px 1px rgba(0, 0, 0, 0.4);
-        }
+        .slide-out-left { transform: translateX(-120%); opacity: 0; }
+        .slide-in-right { transform: translateX(120%); opacity: 0; transition: none !important; }
+        .slide-to-center { transform: translateX(0); opacity: 1; }
+
+        .chess-board { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(5, 1fr); gap: 4px; width: 100%; height: 100%; position: relative; z-index: 1; }
+        .square { display: flex; justify-content: center; align-items: center; position: relative; border-radius: 4px; box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05); }
         .square.light { background: linear-gradient(135deg, #2a2a2a, #1a1a1a); }
         .square.dark { background: linear-gradient(135deg, #151515, #0a0a0a); }
 
-        .piece-wrapper {
-            width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;
-        }
+        /* Piece Visuals */
+        .piece-wrapper { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; position: relative; z-index: 50; }
+        .piece-svg { cursor: pointer; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.8)); display: block; transform-origin: center center; transition: transform 0.2s ease; }
+        .commander-svg { width: 78%; height: 78%; }
+        .guardian-svg, .assassin-svg { width: 64%; height: 64%; }
+        .pawn-svg { width: 48%; height: 48%; }
 
-        .piece-svg {
-            width: 70%; height: 70%; cursor: pointer; position: relative; z-index: 10;
-            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.8)); margin: auto; display: block;
-            /* Ensure transforms don't stick */
-            transform-origin: center center;
-        }
-        .pawn-svg { width: 52.5%; height: 52.5%; }
-
-        @keyframes pieceDrop { 
-            0% { transform: scale(0) translateY(-20px); opacity: 0; } 
-            70% { transform: scale(1.1) translateY(2px); opacity: 1; } 
-            100% { transform: scale(1) translateY(0); opacity: 1; } 
-        }
+        @keyframes pieceDrop { 0% { transform: scale(0) translateY(-20px); opacity: 0; } 70% { transform: scale(1.1) translateY(2px); opacity: 1; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
         .piece-entrance { animation: pieceDrop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both; }
 
-        .square.selected::after { content: ''; position: absolute; inset: 0; border-radius: 4px; z-index: 5; border: 2px solid #fff; box-shadow: 0 0 20px #fff; background-color: rgba(255, 255, 255, 0.2); }
-        .square.valid-move::after { content: ''; position: absolute; inset: 0; border-radius: 4px; z-index: 5; border: 1.5px solid rgba(255, 255, 255, 0.6); box-shadow: 0 0 12px rgba(255, 255, 255, 0.4); background-color: rgba(255, 255, 255, 0.1); }
-        .square.capture-move::after { content: ''; position: absolute; inset: 0; border-radius: 4px; z-index: 5; border: 2.5px solid #fff; box-shadow: 0 0 25px #fff; background-color: rgba(255, 255, 255, 0.3); }
-        .square.in-danger::after { content: ''; position: absolute; inset: 0; border-radius: 4px; z-index: 5; border: 2px solid #ff0000; box-shadow: 0 0 20px #ff0000; animation: dangerPulse 0.8s infinite alternate; }
-        @keyframes dangerPulse { from { opacity: 0.4; } to { opacity: 1; } }
-
-        .selected .piece-svg { transform: scale(1.15); }
-        .captured-piece-svg { width: 32px; height: 32px; margin: 2px 0; }
-
-        /* Ability Cards */
-        .ability-card {
-            background: linear-gradient(#1c1c1e, #1c1c1e) padding-box, linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%) border-box;
-            border: 3px solid transparent; border-radius: 1.5rem; cursor: pointer;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.4); transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.3s ease, border-color 0.3s ease;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
-            padding: 1.5rem 1rem; flex: 1; position: relative;
+        /* REFINED TACTICAL MOVEMENT VECTORS (HOLLOW) */
+        #move-overlay, #active-move-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
+            grid-column: 1 / span 5; grid-row: 1 / span 5;
         }
-        .ability-card:hover:not(.disabled):not(.selected) { transform: translateY(-12px) scale(1.02); box-shadow: 0 0 30px rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.5); }
-        .ability-card.selected { border: 3px solid #fff; box-shadow: none !important; transform: translateY(-12px) scale(1.02); background: linear-gradient(#1c1c1e, #1c1c1e) padding-box, linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.2) 100%) border-box; z-index: 20; }
+        #move-overlay { z-index: 10; } 
+        #active-move-overlay { z-index: 60; } 
+        .move-line { stroke: #666; stroke-width: 0.5px; stroke-linecap: round; opacity: 0.35; }
+        .move-dot-passive { fill: none; stroke: #666; stroke-width: 0.75px; r: 1.25px; opacity: 0.6; }
+        .move-dot.active { fill: none; stroke: #fff; stroke-width: 1px; r: 1.8px; opacity: 1; filter: drop-shadow(0 0 8px rgba(255,255,255,1)); }
+
+        /* Premium Buttons & Ability Cards */
+        .btn-premium, .ability-card {
+            background: linear-gradient(#1c1c1e, #1c1c1e) padding-box, 
+                        linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.05) 100%) border-box;
+            border: 1.5px solid transparent; border-radius: 1.5rem; cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4); transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+        }
+        .ability-card { padding: 1.5rem 1rem; flex: 1; }
+        .btn-premium:hover { transform: translateY(-8px) scale(1.02); box-shadow: 0 0 30px rgba(255, 255, 255, 0.4); border-color: rgba(255, 255, 255, 0.5); }
         .ability-card.disabled { opacity: 0.2; pointer-events: none; filter: grayscale(1); }
 
         .card-title { font-family: 'Syncopate', sans-serif; font-size: 0.7rem; letter-spacing: -0.02em; margin-bottom: 0.5rem; text-transform: uppercase; }
         .card-desc { font-size: 0.6rem; color: rgba(255,255,255,0.4); font-weight: 100; line-height: 1.3; }
 
-        /* Progress & Buttons */
-        .progress-dots { display: flex; align-items: center; gap: 12px; justify-content: flex-end; }
-        .dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); transition: 0.4s; }
-        .dot.active { background: #fff; box-shadow: 0 0 12px #fff; border-color: #fff; }
-        .progress-line { height: 1px; width: 20px; background: rgba(255, 255, 255, 0.1); position: relative; }
-        .progress-line.filled::after { content: ''; position: absolute; top: 0; left: 0; height: 100%; width: 100%; background: #fff; }
+        #right-captured-panel { display: flex; flex-direction: column; justify-content: space-between; height: 81vw; max-height: 450px; width: 110px; padding-left: 32px; z-index: 100; flex-shrink: 0; }
+        .captured-piece-svg { width: 52px; height: 52px; margin: 0; display: flex; align-items: center; justify-content: center; opacity: 0.8; }
 
-        .btn-premium {
-            background: linear-gradient(#1c1c1e, #1c1c1e) padding-box, linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.05) 100%) border-box;
-            border: 1.5px solid transparent; color: #fff; transition: 0.3s ease; cursor: pointer; border-radius: 1rem;
-            display: inline-flex; align-items: center; justify-content: center;
+        .square.selected::after { content: ''; position: absolute; inset: 0; border-radius: 4px; z-index: 5; border: 2px solid #fff; box-shadow: 0 0 20px #fff; background-color: rgba(255, 255, 255, 0.2); }
+        .square.capture-move::after { content: ''; position: absolute; inset: 0; border-radius: 4px; z-index: 5; border: 2.5px solid #fff; box-shadow: 0 0 25px #fff; background-color: rgba(255, 255, 255, 0.3); }
+        .square.in-danger::after { content: ''; position: absolute; inset: 0; border-radius: 4px; z-index: 5; border: 2px solid #ff0000; box-shadow: 0 0 20px #ff0000; animation: dangerPulse 0.8s infinite alternate; }
+
+        #next-challenger-overlay { 
+            position: absolute; inset: 0; 
+            display: flex; align-items: center; justify-content: center; 
+            z-index: 150; background: rgba(0,0,0,0.85); 
+            opacity: 0; visibility: hidden; transition: 0.4s; 
         }
-        .btn-premium:hover { background: linear-gradient(#2a2a2d, #2a2a2d) padding-box, linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.4) 100%) border-box; box-shadow: 0 0 30px rgba(255, 255, 255, 0.6); transform: scale(1.02); }
-
-        #quit-button {
-            position: fixed; bottom: 2rem; left: 2rem;
-            background: rgba(0,0,0,0.5); color: rgba(255,255,255,0.8);
-            transition: all 0.3s ease; cursor: pointer; padding: 10px 24px;
-            font-family: 'Syncopate', sans-serif; font-size: 0.75rem; font-weight: bold; letter-spacing: 0.1em; text-transform: uppercase;
-            border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; backdrop-filter: blur(4px);
-        }
-        #quit-button:hover { color: #fff; border-color: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.4); }
-
-        /* Modals */
-        .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 100; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: 0.4s; backdrop-filter: blur(12px); }
-        .modal-backdrop.visible { opacity: 1; visibility: visible; }
-        .modal-content { background: linear-gradient(#1c1c1e, #1c1c1e) padding-box, linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.05) 100%) border-box; border: 1.5px solid transparent; padding: 3.5rem; border-radius: 2.5rem; text-align: center; transform: scale(0.8) translateY(20px); transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1); display: flex; flex-direction: column; align-items: center; gap: 2rem; }
-        .modal-backdrop.visible .modal-content { transform: scale(1) translateY(0); opacity: 1; }
-
-        #next-challenger-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 50; background: rgba(0,0,0,0.5); opacity: 0; visibility: hidden; transition: 0.4s; }
         #next-challenger-overlay.visible { opacity: 1; visibility: visible; }
 
-        .shattering { animation: shatterExplode 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards; pointer-events: none; z-index: 20 !important; }
-        .impact-shake { animation: boardImpact 0.3s cubic-bezier(.36,.07,.19,.97) both; }
-        @keyframes boardImpact { 0%, 100% { transform: translate(0, 0); } 20% { transform: translate(5px, -3px); } 40% { transform: translate(-5px, 3px); } 60% { transform: translate(3px, 3px); } 80% { transform: translate(-3px, -2px); } }
-        @keyframes shatterExplode { 0% { transform: scale(1); opacity: 1; filter: brightness(1) blur(0); } 30% { transform: scale(1.3); filter: brightness(4) blur(2px); } 100% { transform: scale(2.5) rotate(45deg); opacity: 0; filter: brightness(6) blur(20px); } }
-        
-        .particle { position: absolute; width: 6px; height: 6px; background: #fff; box-shadow: 0 0 10px #fff; border-radius: 1px; pointer-events: none; z-index: 100; opacity: 0; }
+        .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 500; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: 0.4s; backdrop-filter: blur(12px); }
+        .modal-backdrop.visible { opacity: 1; visibility: visible; }
+        .modal-content { background: linear-gradient(#1c1c1e, #1c1c1e) padding-box, linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.05) 100%) border-box; border: 1.5px solid transparent; padding: 3.5rem; border-radius: 2.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 2rem; }
+
+        .particle { position: absolute; width: 6px; height: 6px; background: #fff; box-shadow: 0 0 10px #fff; border-radius: 1px; pointer-events: none; z-index: 1000; opacity: 0; }
         @keyframes particleFly { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(0) rotate(360deg); opacity: 0; } }
-        .ember { position: absolute; width: 3px; height: 3px; background: #ff0000; box-shadow: 0 0 8px #fff; border-radius: 50%; pointer-events: none; z-index: 6; animation: emberFloat 1.5s infinite linear; }
-        @keyframes emberFloat { 0% { transform: translate(var(--ex), 20px); opacity: 0; } 50% { opacity: 1; } 100% { transform: translate(var(--ex_end), -30px); opacity: 0; } }
+        .impact-shake { animation: boardImpact 0.3s cubic-bezier(.36,.07,.19,.97) both; }
     </style>
 </head>
-<body class="flex flex-col items-center justify-center">
+<body>
 
     <canvas id="bg-canvas"></canvas>
     <div class="grain"></div>
 
     <div id="intro-screen">
-        <h1 class="title-font text-center text-white mb-12" style="font-size: 5rem;">AETHER</h1>
-        <button id="start-challenge-btn" class="btn-premium px-16 py-6 title-font text-2xl tracking-[0.1em]">
-            Challenge Aether
+        <h1 class="title-font text-center text-white mb-12" style="font-size: 5rem;">GRIDSTRIKE</h1>
+        <button id="start-challenge-btn" class="btn-premium px-12 py-5 title-font text-lg tracking-[0.1em]">
+            CHALLENGE AETHER
         </button>
     </div>
 
     <div id="main-layout" class="hidden">
         
-        <!-- Left Floating Info Panel -->
-        <div id="left-info-panel">
-            <h1 class="title-font text-white text-5xl mb-6">AETHER</h1>
+        <div id="left-info-panel" class="w-[300px]">
+            <h1 class="title-font text-white text-5xl mb-2">AETHER</h1>
             
-            <div class="w-full flex flex-col items-end mb-8">
-                <div class="progress-dots">
-                    <div class="dot active" id="dot-0"></div>
+            <!-- Tiered Progress HUD -->
+            <div id="progress-container">
+                <div class="progress-cluster">
+                    <div class="dot" id="dot-0"></div>
                     <div class="progress-line" id="line-0"></div>
                     <div class="dot" id="dot-1"></div>
                     <div class="progress-line" id="line-1"></div>
                     <div class="dot" id="dot-2"></div>
+                    
+                    <div class="boss-series-box">
+                        <div class="dot-boss" id="boss-match-0"></div>
+                        <div class="dot-boss" id="boss-match-1"></div>
+                        <div class="dot-boss" id="boss-match-2"></div>
+                    </div>
                 </div>
-                <p id="challenger-label" class="text-[11px] font-thin uppercase tracking-[0.3em] text-white/50 mt-3">Challenger 1</p>
+                <p id="challenger-label" class="text-[11px] font-thin uppercase tracking-[0.3em] text-white/50 mt-4">Apprentice</p>
             </div>
 
-            <div class="text-right">
+            <div class="text-right mt-12">
                 <p id="turn-info" class="text-2xl font-thin text-white/90">Your Turn</p>
                 <p id="ability-info" class="text-xs font-thin text-white h-5 mt-2 uppercase tracking-widest"></p>
             </div>
         </div>
 
-        <!-- Center Combat Wrapper -->
         <div class="board-wrapper">
              <div class="board-slider" id="board-shell">
                 <div id="board-container" class="board-container">
                     <div id="chess-board" class="chess-board"></div>
                 </div>
                 <div id="next-challenger-overlay">
-                    <button id="next-challenger-btn" class="btn-premium px-10 py-5 title-font text-lg tracking-[0.1em]">
-                        Next Challenger
+                    <button id="next-challenger-btn" class="btn-premium px-10 py-5 title-font text-sm tracking-[0.1em]">
+                        NEXT CHALLENGER
                     </button>
                 </div>
             </div>
             
-            <!-- Cards Hand -->
             <div id="card-hand" class="flex justify-center gap-4 w-full max-w-[450px]">
                 <div id="card-knights-leap" class="ability-card">
                     <h3 class="card-title">KNIGHT'S LEAP</h3>
-                    <p class="card-desc">L-shape data jump.</p>
+                    <p class="card-desc">L-shape combat jump.</p>
                 </div>
                 <div id="card-phase-shift" class="ability-card">
                     <h3 class="card-title">PHASE SHIFT</h3>
@@ -241,63 +247,436 @@
             </div>
         </div>
 
-        <!-- Right Floating Panel: Captured Pieces -->
         <div id="right-captured-panel">
-            <!-- Opponent Losses (Top Right) -->
             <div class="captured-column">
-                <div id="black-captured-pieces" class="flex flex-col gap-1 items-center min-h-[20px]"></div>
+                <div id="black-captured-pieces" class="flex flex-col gap-2 items-center min-h-[20px]"></div>
             </div>
-
-            <!-- User Losses (Bottom Right) -->
             <div class="captured-column mt-auto">
-                <div id="white-captured-pieces" class="flex flex-col gap-1 items-center min-h-[20px]"></div>
+                <div id="white-captured-pieces" class="flex flex-col gap-2 items-center min-h-[20px]"></div>
             </div>
         </div>
 
-        <button id="quit-button" title="Quit Challenge">QUIT</button>
+        <button id="quit-button" title="Quit Challenge" class="btn-premium px-6 py-2 fixed bottom-8 left-8 text-xs">QUIT</button>
     </div>
 
-    <!-- Final State Modal -->
     <div id="game-over-modal" class="modal-backdrop">
         <div class="modal-content">
             <h2 id="winner-message" class="title-font text-white uppercase" style="font-size: 2.2rem;"></h2>
-            <button id="play-again-button" class="btn-premium px-16 py-5 font-thin text-xl uppercase tracking-widest">
-                Main Menu
+            <button id="final-reset-btn" class="btn-premium px-16 py-5 font-thin text-xl uppercase tracking-widest">
+                CHALLENGE AETHER
             </button>
         </div>
     </div>
 
     <script>
-        /* WEBGL BACKGROUND */
-        function initShader() {
-            const canvas = document.getElementById('bg-canvas');
-            const gl = canvas.getContext('webgl');
-            if (!gl) return;
-            const vsSource = `attribute vec4 aVertexPosition; void main() { gl_Position = aVertexPosition; }`;
-            const fsSource = `
-                precision highp float;
-                uniform float u_time;
-                uniform vec2 u_resolution;
-                float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
-                float noise(vec2 p) { vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f); float a = hash(i); float b = hash(i + vec2(1.0, 0.0)); float c = hash(i + vec2(0.0, 1.0)); float d = hash(i + vec2(1.0, 1.0)); return mix(mix(a, b, f.x), mix(c, d, f.x), f.y); }
-                float fbm(vec2 p) { float v = 0.0; float a = 0.5; for (int i = 0; i < 5; i++) { v += a * noise(p); p *= 2.1; a *= 0.5; } return v; }
-                float staticStars(vec2 uv) { vec2 grid = uv * 50.0; vec2 id = floor(grid); vec2 g = fract(grid) - 0.5; float h = hash(id); float d = length(g - (vec2(hash(id + 13.0), hash(id + 47.0)) - 0.5) * 0.9); float sizeFactor = pow(h, 8.0); float finalSize = 0.005 + sizeFactor * 0.055; float star = smoothstep(finalSize, 0.0, d); return (h > 0.94) ? star * (0.4 + sizeFactor * 0.6) : 0.0; }
-                void main() {
-                    vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / min(u_resolution.y, u_resolution.x);
-                    float r = length(uv); float angle = atan(uv.y, uv.x);
-                    vec2 q = vec2(fbm(uv + u_time * 0.04), fbm(uv + vec2(1.7, 9.2) + u_time * 0.02));
-                    vec2 r_warp = vec2(fbm(uv + 4.0 * q + u_time * 0.03 + vec2(1.7, 9.2)), fbm(uv + 4.0 * q + u_time * 0.01 + vec2(8.3, 2.8)));
-                    float spiral = angle + r * (4.5 + 3.0 * fbm(uv * 0.3)) - u_time * 0.08;
-                    float pattern = pow(fbm(uv * 1.5 + r_warp * 3.5 + vec2(cos(spiral) * r, sin(spiral) * r) * 0.8) * 1.15, 2.2); 
-                    vec3 finalCol = mix(vec3(0.005), vec3(0.42, 0.42, 0.46), clamp(pattern, 0.0, 1.0)) + vec3(staticStars(uv));
-                    gl_FragColor = vec4(finalCol * smoothstep(1.6, 0.35, r), 1.0);
+        /* --- UTILS --- */
+        function el(id) { return document.getElementById(id); }
+
+        /* --- GLOBAL STATE --- */
+        var tierTitles = ["Apprentice", "Adept", "Exemplar", "Grand Master"];
+        var currentStage = 0, board = [], currentPlayer = 'white', selectedPiece = null, validMoves = [], isGameOver = false, isPlayerTurn = true, isAnimating = false;
+        var commanderSwapUsed = { white: false, black: false }, capturedByWhite = [], capturedByBlack = [], activeCard = null, runCardsUsed = {};
+        var bossResults = [];
+
+        var PIECES_SVG = {
+            commander: (color) => {
+                const isW = color === 'white';
+                const starGrad = isW ? 'grad_cmd_w_star' : 'grad_cmd_b_star';
+                const circleGrad = isW ? 'grad_cmd_w_circle' : 'grad_cmd_b_circle';
+                return `<svg class="piece-svg commander-svg" viewBox="0 0 100 100">
+                    <defs>
+                        <linearGradient id="grad_cmd_b_star" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#9B9B9B" /><stop offset="100%" stop-color="#222222" /></linearGradient>
+                        <linearGradient id="grad_cmd_b_circle" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#D1D1D1" /><stop offset="100%" stop-color="#1A1A1A" /></linearGradient>
+                        <linearGradient id="grad_cmd_w_star" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFFFFF" /><stop offset="100%" stop-color="#999999" /></linearGradient>
+                        <linearGradient id="grad_cmd_w_circle" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#F5F5F5" /><stop offset="100%" stop-color="#999999" /></linearGradient>
+                    </defs>
+                    <polygon fill="url(#${starGrad})" points="50,1 58.8,17.1 73,8 75.8,24.5 93,25 87.2,40.7 99,50 87.2,59.3 93,75 75.8,75.5 73,92 58.8,82.9 50,99 41.2,82.9 27,92 24.2,75.5 7,75 12.8,59.3 1,50 12.8,40.7 7,25 24.2,24.5 27,8 41.2,17.1" />
+                    <circle cx="50" cy="50" r="28" fill="url(#${circleGrad})" />
+                </svg>`;
+            },
+            guardian: (color) => {
+                const isW = color === 'white';
+                const c = isW ? ['#FFFFFF', '#CCCCCC', '#BBBBBB', '#999999', '#DDDDDD'] : ['#999999', '#444444', '#555555', '#000000', '#444444'];
+                return `<svg class="piece-svg guardian-svg" viewBox="0 0 100 100">
+                    <polygon points="0,0 100,0 80,20 20,20" fill="${c[0]}"/>
+                    <polygon points="0,0 20,20 20,80 0,100" fill="${c[1]}"/>
+                    <polygon points="100,0 80,20 80,80 100,100" fill="${c[2]}"/>
+                    <polygon points="0,100 100,100 80,80 20,80" fill="${c[3]}"/>
+                    <rect x="20" y="20" width="60" height="60" fill="${c[4]}" />
+                    <g transform="translate(35, 35) scale(0.3)">
+                        <polygon points="0,0 100,0 50,50" fill="${c[0]}"/>
+                        <polygon points="0,0 0,100 50,50" fill="${c[1]}"/>
+                        <polygon points="100,0 100,100 50,50" fill="${c[2]}"/>
+                        <polygon points="0,100 100,100 50,50" fill="${c[3]}"/>
+                    </g>
+                </svg>`;
+            },
+            assassin: (color) => {
+                const isW = color === 'white';
+                const chassisGrad = isW ? 'grad_asn_w_dyn' : 'grad_asn_b_dyn';
+                const c = isW ? ['#FFFFFF', '#CCCCCC', '#BBBBBB', '#999999'] : ['#999999', '#444444', '#555555', '#000000'];
+                return `<svg class="piece-svg assassin-svg" viewBox="0 0 100 100">
+                    <defs>
+                        <radialGradient id="grad_asn_b_dyn" cx="50%" cy="50%" r="50%" fx="35%" fy="35%">
+                            <stop offset="0%" stop-color="#B8B8B8" /><stop offset="100%" stop-color="#1A1A1A" />
+                        </radialGradient>
+                        <radialGradient id="grad_asn_w_dyn" cx="50%" cy="50%" r="50%" fx="35%" fy="35%">
+                            <stop offset="0%" stop-color="#FFFFFF" /><stop offset="100%" stop-color="#999999" />
+                        </radialGradient>
+                    </defs>
+                    <circle cx="50" cy="50" r="50" fill="url(#${chassisGrad})"/>
+                    <g transform="translate(50, 50) rotate(45) scale(0.25) translate(-50, -50)">
+                        <polygon points="0,0 100,0 50,50" fill="${c[0]}"/> 
+                        <polygon points="0,0 0,100 50,50" fill="${c[1]}"/> 
+                        <polygon points="100,0 100,100 50,50" fill="${c[3]}"/> 
+                        <polygon points="0,100 100,100 50,50" fill="${c[2]}"/>
+                    </g>
+                </svg>`;
+            },
+            pawn: (color) => {
+                 const isW = color === 'white';
+                 const c = isW ? ['#FFFFFF', '#CCCCCC', '#BBBBBB', '#999999'] : ['#999999', '#444444', '#555555', '#000000'];
+                 return `<svg class="piece-svg pawn-svg" viewBox="0 0 100 100">
+                    <polygon points="0,0 100,0 50,50" fill="${c[0]}"/>
+                    <polygon points="0,0 0,100 50,50" fill="${c[1]}"/>
+                    <polygon points="100,0 100,100 50,50" fill="${c[2]}"/>
+                    <polygon points="0,100 100,100 50,50" fill="${c[3]}"/>
+                 </svg>`;
+            }
+        };
+
+        function updateRunUI() {
+            if (el('challenger-label')) el('challenger-label').textContent = tierTitles[currentStage];
+            for(let i=0; i<3; i++) {
+                const dot = el(`dot-${i}`);
+                if(dot) dot.classList.toggle('active', i <= currentStage);
+                const line = el(`line-${i}`);
+                if(line) line.classList.toggle('filled', i < currentStage);
+            }
+            for(let i=0; i<3; i++) {
+                const bDot = el(`boss-match-${i}`);
+                if(!bDot) continue;
+                bDot.className = 'dot-boss';
+                if(bossResults[i] === 'win') bDot.classList.add('win');
+                else if(bossResults[i] === 'loss') bDot.classList.add('loss');
+            }
+            document.querySelectorAll('.ability-card').forEach(card => card.classList.toggle('disabled', !!runCardsUsed[card.id]));
+        }
+
+        function drawIndicators() {
+            const passiveSvg = el('move-overlay'), activeSvg = el('active-move-overlay');
+            if(!passiveSvg || !activeSvg) return;
+            passiveSvg.innerHTML = ''; activeSvg.innerHTML = '';
+            const radius = 1.25;
+
+            for(let r=0; r<5; r++) {
+                for(let c=0; c<5; c++) {
+                    const p = (board[r] && board[r][c]) ? board[r][c] : null;
+                    if (p) {
+                        if (selectedPiece && selectedPiece.r === r && selectedPiece.c === c) continue;
+                        const moves = getValidMoves(p, r, c);
+                        moves.forEach(m => {
+                            const x1 = 10 + c * 20, y1 = 10 + r * 20;
+                            const x2 = 10 + m.c * 20, y2 = 10 + m.r * 20;
+                            const dx = x2 - x1, dy = y2 - y1;
+                            const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+                            
+                            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                            line.setAttribute("x1", x1 + (dx/dist) * radius);
+                            line.setAttribute("y1", y1 + (dy/dist) * radius);
+                            line.setAttribute("x2", x2 - (dx/dist) * radius);
+                            line.setAttribute("y2", y2 - (dy/dist) * radius);
+                            line.setAttribute("class", "move-line");
+                            passiveSvg.appendChild(line);
+
+                            const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                            dot.setAttribute("cx", x2); dot.setAttribute("cy", y2); dot.setAttribute("r", radius);
+                            dot.setAttribute("class", "move-dot-passive");
+                            passiveSvg.appendChild(dot);
+                        });
+                    }
                 }
-            `;
+            }
+
+            if (selectedPiece) {
+                const activeRadius = 1.8;
+                const p = (board[selectedPiece.r] && board[selectedPiece.r][selectedPiece.c]) ? board[selectedPiece.r][selectedPiece.c] : null;
+                if (p) {
+                    const standardMoves = getValidMoves(p, selectedPiece.r, selectedPiece.c);
+                    let extraMoves = [];
+                    if (activeCard === 'card-knights-leap') extraMoves = getKnightLeapMoves(selectedPiece.r, selectedPiece.c, p.color);
+                    else if (activeCard === 'card-phase-shift') extraMoves = getPhaseShiftMoves();
+                    
+                    [...standardMoves, ...extraMoves].forEach(m => {
+                        const x2 = 10 + m.c * 20, y2 = 10 + m.r * 20;
+                        const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                        dot.setAttribute("cx", x2); dot.setAttribute("cy", y2); dot.setAttribute("r", activeRadius);
+                        dot.setAttribute("class", "move-dot active");
+                        activeSvg.appendChild(dot);
+                    });
+                }
+            }
+        }
+
+        function renderBoard(animate = false) {
+            const boardElement = el('chess-board');
+            if (!boardElement) return;
+            boardElement.innerHTML = '';
+            const passOverlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            passOverlay.id = "move-overlay"; passOverlay.setAttribute("viewBox", "0 0 100 100"); passOverlay.setAttribute("preserveAspectRatio", "none");
+            boardElement.appendChild(passOverlay);
+            const activeOverlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            activeOverlay.id = "active-move-overlay"; activeOverlay.setAttribute("viewBox", "0 0 100 100"); activeOverlay.setAttribute("preserveAspectRatio", "none");
+            boardElement.appendChild(activeOverlay);
+
+            const danger = calculateCommanderDanger();
+            for (let r = 0; r < 5; r++) {
+                for (let c = 0; c < 5; c++) {
+                    const sq = document.createElement('div');
+                    sq.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
+                    sq.dataset.row = r; sq.dataset.col = c;
+                    sq.style.gridArea = `${r+1} / ${c+1} / ${r+2} / ${c+2}`;
+                    if (danger.some(ds => ds.r === r && ds.c === c)) { sq.classList.add('in-danger'); }
+                    if (board[r] && board[r][c]) {
+                        const wrapper = document.createElement('div'); wrapper.className = 'piece-wrapper';
+                        wrapper.innerHTML = board[r][c].svg;
+                        const svgEl = wrapper.querySelector('svg');
+                        if (svgEl) {
+                            if (board[r][c].piece === 'commander') svgEl.classList.add('commander-svg');
+                            else if (board[r][c].piece === 'guardian') svgEl.classList.add('guardian-svg');
+                            else if (board[r][c].piece === 'assassin') svgEl.classList.add('assassin-svg');
+                            else svgEl.classList.add('pawn-svg');
+                            if (animate) { svgEl.classList.add('piece-entrance'); svgEl.style.animationDelay = `${(r * 5 + c) * 0.03}s`; }
+                        }
+                        sq.appendChild(wrapper);
+                    }
+                    boardElement.appendChild(sq);
+                }
+            }
+            document.querySelectorAll('.square').forEach(s => s.onclick = onSquareClick);
+            document.querySelectorAll('.ability-card').forEach(card => card.onclick = onCardClick);
+            drawIndicators();
+        }
+
+        function initializeStage() {
+            board = Array.from({ length: 5 }, () => Array(5).fill(null));
+            board[4][2] = { piece: 'commander', color: 'white', svg: PIECES_SVG.commander('white') };
+            board[4][3] = { piece: 'guardian', color: 'white', svg: PIECES_SVG.guardian('white') };
+            board[4][1] = { piece: 'assassin', color: 'white', svg: PIECES_SVG.assassin('white') };
+            board[3][1] = { piece: 'pawn', color: 'white', svg: PIECES_SVG.pawn('white') };
+            board[3][2] = { piece: 'pawn', color: 'white', svg: PIECES_SVG.pawn('white') };
+            board[3][3] = { piece: 'pawn', color: 'white', svg: PIECES_SVG.pawn('white') };
+            board[0][2] = { piece: 'commander', color: 'black', svg: PIECES_SVG.commander('black') };
+            board[0][1] = { piece: 'guardian', color: 'black', svg: PIECES_SVG.guardian('black') };
+            board[0][3] = { piece: 'assassin', color: 'black', svg: PIECES_SVG.assassin('black') };
+            board[1][1] = { piece: 'pawn', color: 'black', svg: PIECES_SVG.pawn('black') };
+            board[1][2] = { piece: 'pawn', color: 'black', svg: PIECES_SVG.pawn('black') };
+            board[1][3] = { piece: 'pawn', color: 'black', svg: PIECES_SVG.pawn('black') };
+            currentPlayer = 'white'; selectedPiece = null; validMoves = []; isGameOver = false; isPlayerTurn = true;
+            commanderSwapUsed = { white: false, black: false }; capturedByWhite = []; capturedByBlack = [];
+            activeCard = null;
+            renderBoard(true); renderCapturedPieces(); updateStatus(); updateRunUI();
+            if (el('next-challenger-overlay')) el('next-challenger-overlay').classList.remove('visible'); 
+            if (el('game-over-modal')) el('game-over-modal').classList.remove('visible');
+            if (el('chess-board')) el('chess-board').style.opacity = '1';
+            drawIndicators();
+        }
+
+        function resetToMenu() {
+            const mainLayout = el('main-layout'), introScreen = el('intro-screen'), gameOverModal = el('game-over-modal');
+            if (mainLayout) { mainLayout.classList.remove('visible'); mainLayout.classList.add('hidden'); }
+            if (gameOverModal) gameOverModal.classList.remove('visible'); 
+            if (introScreen) { introScreen.style.display = 'flex'; introScreen.classList.remove('fade-out'); }
+        }
+
+        function startRun() {
+            const introScreen = el('intro-screen');
+            if (introScreen) introScreen.classList.add('fade-out');
+            setTimeout(() => {
+                currentStage = 0; runCardsUsed = {}; bossResults = [];
+                const mainLayout = el('main-layout');
+                if (mainLayout) { mainLayout.classList.add('visible'); mainLayout.classList.remove('hidden'); }
+                initializeStage();
+            }, 800);
+        }
+
+        function transitionToNextStage() {
+            const shell = el('board-container'); if (shell) shell.classList.add('slide-out-left');
+            setTimeout(() => {
+                currentStage++; initializeStage(); 
+                if (shell) {
+                    shell.style.transition = 'none'; shell.classList.remove('slide-out-left');
+                    shell.classList.add('slide-in-right'); shell.offsetHeight; 
+                    shell.style.transition = ''; shell.classList.remove('slide-in-right');
+                    shell.classList.add('slide-to-center');
+                    setTimeout(() => shell.classList.remove('slide-to-center'), 600);
+                }
+            }, 600);
+        }
+
+        function onCardClick(e) {
+            if (isAnimating || !isPlayerTurn) return;
+            const cardId = e.currentTarget.id; if (runCardsUsed[cardId]) return;
+            if (activeCard === cardId) { activeCard = null; e.currentTarget.classList.remove('selected'); } 
+            else { document.querySelectorAll('.ability-card').forEach(c => c.classList.remove('selected')); activeCard = cardId; e.currentTarget.classList.add('selected'); }
+            if(selectedPiece) selectPiece(selectedPiece.r, selectedPiece.c);
+        }
+
+        async function onSquareClick(e) {
+            if (isGameOver || !isPlayerTurn || isAnimating) return;
+            const r = parseInt(e.currentTarget.dataset.row), c = parseInt(e.currentTarget.dataset.col);
+            const p = (board[r] && board[r][c]) ? board[r][c] : null;
+            if (selectedPiece) {
+                if (selectedPiece.r === r && selectedPiece.c === c) { deselectPiece(); return; }
+                let currentValid = [...validMoves];
+                if (activeCard === 'card-knights-leap') currentValid.push(...getKnightLeapMoves(selectedPiece.r, selectedPiece.c, board[selectedPiece.r][selectedPiece.c].color));
+                if (activeCard === 'card-phase-shift') currentValid = getPhaseShiftMoves();
+                const move = currentValid.find(m => m.r === r && m.c === c);
+                if (move) {
+                    const fromR = selectedPiece.r, fromC = selectedPiece.c;
+                    deselectPiece(); await movePiece(fromR, fromC, r, c, move.isSwap);
+                    if (activeCard) { runCardsUsed[activeCard] = true; activeCard = null; document.querySelectorAll('.ability-card').forEach(c => c.classList.remove('selected')); updateRunUI(); }
+                    switchPlayer();
+                } else if (p && p.color === currentPlayer) selectPiece(r, c);
+                else deselectPiece();
+            } else if (p && p.color === currentPlayer) selectPiece(r, c);
+        }
+
+        async function movePiece(fR, fC, tR, tC, swap = false) {
+            isAnimating = true;
+            const fSq = document.querySelector(`[data-row='${fR}'][data-col='${fC}']`), tSq = document.querySelector(`[data-row='${tR}'][data-col='${tC}']`);
+            const pEl = fSq ? fSq.querySelector('.piece-svg') : null, tP = (board[tR] && board[tR][tC]) ? board[tR][tC] : null;
+            if (tP && !swap && tSq) {
+                setTimeout(() => { const victimPieceEl = tSq.querySelector('.piece-svg'); if (victimPieceEl) victimPieceEl.style.display = 'none'; triggerParticles(tSq, tP.color); }, 400); 
+            }
+            if (pEl && fSq && tSq) {
+                const fRct = fSq.getBoundingClientRect(), tRct = tSq.getBoundingClientRect();
+                pEl.style.cssText += `transition:transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);z-index:100;transform:translate(${tRct.left - fRct.left}px, ${tRct.top - fRct.top}px);`;
+                await new Promise(res => setTimeout(res, 470));
+            }
+            if (swap) { 
+                const p1 = board[fR][fC], p2 = board[tR][tC]; board[tR][tC] = p1; board[fR][fC] = p2; commanderSwapUsed[currentPlayer] = true; 
+            } else {
+                const p = board[fR][fC], target = board[tR][tC];
+                if (target) { currentPlayer === 'white' ? capturedByWhite.push(target) : capturedByBlack.push(target); renderCapturedPieces(); if (target.piece === 'commander') isGameOver = true; }
+                board[tR][tC] = p; board[fR][fC] = null;
+            }
+            renderBoard(); isAnimating = false;
+        }
+
+        function triggerParticles(squareElement, color) {
+            const shell = el('board-shell'); if (!shell || !squareElement) return;
+            const rect = squareElement.getBoundingClientRect(), sRect = shell.getBoundingClientRect();
+            const centerX = rect.left - sRect.left + rect.width / 2, centerY = rect.top - sRect.top + rect.height / 2;
+            const particleColor = color === 'black' ? '#444' : '#FFF';
+            for (let i = 0; i < 15; i++) {
+                const p = document.createElement('div'); p.className = 'particle'; 
+                p.style.left = centerX + 'px'; p.style.top = centerY + 'px';
+                p.style.background = particleColor;
+                const a = Math.random() * Math.PI * 2, v = 80 + Math.random() * 150;
+                p.style.setProperty('--dx', `${Math.cos(a) * v}px`); p.style.setProperty('--dy', `${Math.sin(a) * v}px`);
+                p.style.animation = `particleFly 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards`; 
+                shell.appendChild(p); setTimeout(() => p.remove(), 1200);
+            }
+            shell.classList.add('impact-shake'); setTimeout(() => shell.classList.remove('impact-shake'), 300);
+        }
+
+        function selectPiece(r, c) {
+            deselectPiece(); selectedPiece = { r, c }; 
+            const p = (board[r] && board[r][c]) ? board[r][c] : null; if (!p) return;
+            validMoves = getValidMoves(p, r, c);
+            if (activeCard === 'card-knights-leap') validMoves.push(...getKnightLeapMoves(selectedPiece.r, selectedPiece.c, board[selectedPiece.r][selectedPiece.c].color));
+            if (activeCard === 'card-phase-shift') validMoves = getPhaseShiftMoves();
+            highlightSquares(); drawIndicators();
+        }
+
+        function deselectPiece() { selectedPiece = null; validMoves = []; highlightSquares(); drawIndicators(); }
+        function highlightSquares() { document.querySelectorAll('.square').forEach(s => s.classList.remove('selected', 'valid-move', 'capture-move', 'swap-move')); if (selectedPiece) { const s = document.querySelector(`[data-row='${selectedPiece.r}'][data-col='${selectedPiece.c}']`); if (s) s.classList.add('selected'); } }
+        
+        function switchPlayer() {
+            if (isGameOver) { 
+                const winMsg = el('winner-message');
+                if (currentPlayer === 'white') {
+                    if (currentStage === 3) {
+                        bossResults.push('win');
+                        const wins = bossResults.filter(r => r === 'win').length;
+                        if (wins >= 2) { winMsg.textContent = 'CONQUERED AETHER'; el('game-over-modal').classList.add('visible'); }
+                        else { 
+                            if (el('next-challenger-overlay')) { el('next-challenger-btn').textContent = "NEXT BOSS MATCH"; el('next-challenger-overlay').classList.add('visible'); el('next-challenger-btn').onclick = () => initializeStage(); }
+                        }
+                    } else {
+                        if (el('next-challenger-overlay')) { el('next-challenger-btn').textContent = "NEXT CHALLENGER"; el('next-challenger-overlay').classList.add('visible'); el('next-challenger-btn').onclick = transitionToNextStage; }
+                    }
+                } else {
+                    if (currentStage === 3) {
+                        bossResults.push('loss');
+                        const losses = bossResults.filter(r => r === 'loss').length;
+                        if (losses >= 2) { winMsg.textContent = 'RUN TERMINATED'; el('game-over-modal').classList.add('visible'); }
+                        else {
+                            if (el('next-challenger-overlay')) { el('next-challenger-btn').textContent = "RETRY BOSS MATCH"; el('next-challenger-overlay').classList.add('visible'); el('next-challenger-btn').onclick = () => initializeStage(); }
+                        }
+                    } else { winMsg.textContent = 'RUN TERMINATED'; el('game-over-modal').classList.add('visible'); }
+                }
+                updateRunUI(); return; 
+            }
+            currentPlayer = currentPlayer === 'white' ? 'black' : 'white'; updateStatus();
+            if (currentPlayer === 'black') { isPlayerTurn = false; setTimeout(makeComputerMove, 800); } else isPlayerTurn = true;
+        }
+
+        async function makeComputerMove() {
+            let move; const dif = currentStage;
+            const ms = getAllMoves(board, 'black');
+            if (ms.length === 0) { isGameOver = true; switchPlayer(); return; }
+            if (dif === 0) move = ms[Math.floor(Math.random() * ms.length)];
+            else if (dif === 1) { ms.sort((a, b) => ( (board[b.to.r] && board[b.to.r][b.to.c]) ? 1 : 0 ) - ( (board[a.to.r] && board[a.to.r][a.to.c]) ? 1 : 0 )); move = ms[0]; }
+            else move = minimaxRoot(dif === 3 ? 4 : 3, board, 'black');
+            if (move) await movePiece(move.from.r, move.from.c, move.to.r, move.to.c, move.to.isSwap);
+            switchPlayer();
+        }
+
+        function renderCapturedPieces() {
+            const whiteContainer = el('white-captured-pieces'), blackContainer = el('black-captured-pieces');
+            if(!whiteContainer || !blackContainer) return;
+            whiteContainer.innerHTML = ''; blackContainer.innerHTML = '';
+            capturedByWhite.forEach(p => { const div = document.createElement('div'); div.className = 'captured-piece-svg'; div.innerHTML = p.svg; whiteContainer.appendChild(div); });
+            capturedByBlack.forEach(p => { const div = document.createElement('div'); div.className = 'captured-piece-svg'; div.innerHTML = p.svg; blackContainer.appendChild(div); });
+        }
+
+        function calculateCommanderDanger() {
+            const danger = [], wCmd = findPiece('commander', 'white'), bCmd = findPiece('commander', 'black');
+            if (wCmd && isSquareAttacked(wCmd.r, wCmd.c, 'black')) danger.push(wCmd);
+            if (bCmd && isSquareAttacked(bCmd.r, bCmd.c, 'white')) danger.push(bCmd);
+            return danger;
+        }
+
+        function findPiece(t, col) { for(let r=0; r<5; r++) for(let c=0; c<5; c++) if(board[r] && board[r][c] && board[r][c].piece === t && board[r][c].color === col) return {r, c}; return null; }
+        function updateStatus() { const turnInfo = el('turn-info'); if (turnInfo) turnInfo.textContent = currentPlayer === 'white' ? "Your Turn" : "Enemy Thinking..."; }
+        function minimaxRoot(d, cB, pC) { const ms = getAllMoves(cB, pC); let bS = -Infinity, bM = null; for(const m of ms) { const s = minimax(d-1, getBoardAfterMove(cB, m), -Infinity, Infinity, false); if (s > bS) { bS = s; bM = m; } } return bM; }
+        function minimax(d, cB, a, b, isM) { if (d === 0) return -evaluate(cB); const ms = getAllMoves(cB, isM ? 'black' : 'white'); if (isM) { let best = -Infinity; for (const m of ms) { best = Math.max(best, minimax(d-1, getBoardAfterMove(cB,m), a, b, false)); a = Math.max(a, best); if (b <= a) break; } return best; } else { let best = Infinity; for (const m of ms) { best = Math.min(best, minimax(d-1, getBoardAfterMove(cB,m), a, b, true)); b = Math.min(best, minimax(d-1, getBoardAfterMove(cB,m), a, b, true)); if (b <= a) break; } return best; } }
+        function evaluate(b) { let s = 0; const v = { commander: 1000, guardian: 40, assassin: 40, pawn: 10 }; for (let r=0; r<5; r++) for (let c=0; c<5; c++) { const p = (b[r] && b[r][c]) ? b[r][c] : null; if (p) s += (p.color === 'white' ? v[p.piece] : -v[p.piece]); } return s; }
+        function getAllMoves(b, col) { const ms = []; for (let r=0; r<5; r++) for (let c=0; c<5; c++) if (b[r] && b[r][c] && b[r][c].color === col) getValidMoves(b[r][c], r, c, b).forEach(m => ms.push({from: {r,c}, to: m})); return ms; }
+        function getBoardAfterMove(b, m) { const n = JSON.parse(JSON.stringify(b)); if(n[m.to.r] && n[m.from.r]) { n[m.to.r][m.to.c] = n[m.from.r][m.from.c]; n[m.from.r][m.from.c] = null; } return n; }
+        function isWithinBoard(r, c) { return r >= 0 && r < 5 && c >= 0 && c < 5; }
+        function getValidMoves(p, r, c, b = board) {
+            if (!p) return []; const ms = [], col = p.color;
+            if (p.piece === 'pawn') { const dir = col === 'white' ? -1 : 1; if (isWithinBoard(r+dir, c) && b[r+dir] && !b[r+dir][c]) ms.push({r: r+dir, c}); [[r+dir, c-1], [r+dir, c+1]].forEach(([nr, nc]) => { if (isWithinBoard(nr, nc) && b[nr] && b[nr][nc] && b[nr][nc].color !== col) ms.push({r: nr, c: nc}); }); }
+            else if (p.piece === 'guardian') { [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr, dc]) => { for (let i=1; i<=2; i++) { const nr = r+dr*i, nc = c+dc*i; if (!isWithinBoard(nr, nc)) break; if (b[nr] && b[nr][nc]) { if(b[nr][nc].color !== col) ms.push({r: nr, c: nc}); break; } ms.push({r: nr, c: nc}); } }); }
+            else if (p.piece === 'assassin') { [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([dr, dc]) => { const nr = r+dr, nc = c+dc; if (isWithinBoard(nr, nc)) { if (!b[nr] || !b[nr][nc] || b[nr][nc].color !== col) ms.push({r: nr, c: nc}); const nr2 = r+dr*2, nc2 = c+dc*2; if (isWithinBoard(nr2, nc2) && (!b[nr] || !b[nr][nc] || b[nr][nc].color === col)) if (!b[nr2] || !b[nr2][nc2] || b[nr2][nc2].color !== col) ms.push({r: nr2, c: nc2}); } }); }
+            else if (p.piece === 'commander') { for(let dr=-1; dr<=1; dr++) for(let dc=-1; dc<=1; dc++) { if (dr===0 && dc===0) continue; const nr = r+dr, nc = c+dc; if (isWithinBoard(nr, nc)) { const t = b[nr] ? b[nr][nc] : null; if (!t || t.color !== col) ms.push({r: nr, c: nc}); if (!commanderSwapUsed[col] && t && t.color === col) ms.push({r: nr, c: nc, isSwap: true}); } } }
+            return ms;
+        }
+        function getKnightLeapMoves(r, c, col) { const m = []; [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]].forEach(([dr, dc]) => { const nr = r+dr, nc = c+dc; if (isWithinBoard(nr, nc) && (!board[nr] || !board[nr][nc] || board[nr][nc].color !== col)) m.push({r: nr, c: nc}); }); return m; }
+        function getPhaseShiftMoves() { const m = []; if (!board) return m; for(let r=0; r<5; r++) { if (!board[r]) continue; for(let c=0; c<5; c++) { if(!board[r][c]) m.push({r, c}); } } return m; }
+        function isSquareAttacked(r, c, attackerColor, b = board) { return getAllMoves(b, attackerColor).some(m => m.to.r === r && m.to.c === c); }
+
+        function initShader() {
+            const canvas = el('bg-canvas'); const gl = canvas.getContext('webgl'); if (!gl) return;
+            const vsSource = `attribute vec4 aVertexPosition; void main() { gl_Position = aVertexPosition; }`;
+            const fsSource = `precision highp float; uniform float u_time; uniform vec2 u_resolution; float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); } float noise(vec2 p) { vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f); float a = hash(i); float b = hash(i + vec2(1.0, 0.0)); float c = hash(i + vec2(0.0, 1.0)); float d = hash(i + vec2(1.0, 1.0)); return mix(mix(a, b, f.x), mix(c, d, f.x), f.y); } float fbm(vec2 p) { float v = 0.0; float a = 0.5; for (int i = 0; i < 7; i++) { v += a * noise(p); p *= 2.1; a *= 0.5; } return v; } float staticStars(vec2 uv) { vec2 grid = uv * 60.0; vec2 id = floor(grid); vec2 g = fract(grid) - 0.5; float h = hash(id); float d = length(g - (vec2(hash(id + 13.0), hash(id + 47.0)) - 0.5) * 0.9); float sizeFactor = pow(h, 8.0); float finalSize = 0.005 + sizeFactor * 0.065; float star = smoothstep(finalSize, 0.0, d); return (h > 0.80) ? star * (0.6 + sizeFactor * 0.4) : 0.0; } void main() { vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / min(u_resolution.y, u_resolution.x); float r = length(uv); float angle = atan(uv.y, uv.x); vec2 q = vec2(fbm(uv + u_time * 0.05), fbm(uv + vec2(1.7, 9.2) + u_time * 0.03)); vec2 r_warp = vec2(fbm(uv + 4.0 * q + u_time * 0.04 + vec2(1.7, 9.2)), fbm(uv + 4.0 * q + u_time * 0.02 + vec2(8.3, 2.8))); float spiral = angle + r * (4.5 + 3.0 * fbm(uv * 0.3)) - u_time * 0.1; float pattern = pow(fbm(uv * 2.0 + r_warp * 4.5 + vec2(cos(spiral) * r, sin(spiral) * r) * 1.2) * 1.5, 3.2); vec3 finalCol = mix(vec3(0.001), vec3(0.5, 0.5, 0.55), clamp(pattern, 0.0, 1.0)) + vec3(staticStars(uv)); gl_FragColor = vec4(finalCol * smoothstep(1.8, 0.4, r), 1.0); }`;
             const vs = gl.createShader(gl.VERTEX_SHADER); gl.shaderSource(vs, vsSource); gl.compileShader(vs);
             const fs = gl.createShader(gl.FRAGMENT_SHADER); gl.shaderSource(fs, fsSource); gl.compileShader(fs);
-            const program = gl.createProgram(); gl.attachShader(program, vs); gl.attachShader(program, fs);
-            gl.linkProgram(program); gl.useProgram(program);
-            const vertices = new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]);
+            const program = gl.createProgram(); gl.attachShader(program, vs); gl.attachShader(program, fs); gl.linkProgram(program); gl.useProgram(program);
+            const vertices = new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]);
             const buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
             const pos = gl.getAttribLocation(program, "aVertexPosition"); gl.enableVertexAttribArray(pos); gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
             const timeLoc = gl.getUniformLocation(program, "u_time"), resLoc = gl.getUniformLocation(program, "u_resolution");
@@ -307,281 +686,12 @@
             requestAnimationFrame(render);
         }
 
-        /* PIECES */
-        const PIECES_SVG = {
-            commander: (color) => {
-                const isW = color === 'white';
-                if (isW) return `<svg class="piece-svg" viewBox="0 0 100 100"><defs><linearGradient id="grad_cmd_w" x1="0%" y1="50%" x2="100%" y2="50%"><stop offset="0%" stop-color="#FA74B0" /><stop offset="55%" stop-color="#0382BD" /><stop offset="100%" stop-color="#70F9AD" /></linearGradient><clipPath id="core-clip"><circle cx="50" cy="50" r="22"/></clipPath></defs><circle cx="50" cy="50" r="45" fill="url(#grad_cmd_w)"/><circle cx="50" cy="50" r="34" fill="#FF85C0"/><g clip-path="url(#core-clip)"><rect x="0" y="0" width="50" height="50" fill="#237e96"/><rect x="50" y="0" width="50" height="50" fill="#78e6b1"/><rect x="0" y="50" width="50" height="50" fill="#6a2ca4"/><rect x="50" y="50" width="50" height="50" fill="#f570a5"/></g></svg>`;
-                return `<svg class="piece-svg" viewBox="0 0 100 100"><defs><linearGradient id="grad_cmd_b" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#999" /><stop offset="100%" stop-color="#333" /></linearGradient><clipPath id="core-clip-b"><circle cx="50" cy="50" r="22"/></clipPath></defs><circle cx="50" cy="53" r="45" fill="rgba(0,0,0,0.4)"/><circle cx="50" cy="50" r="45" fill="url(#grad_cmd_b)"/><circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2"/><circle cx="50" cy="50" r="34" fill="#555"/><g clip-path="url(#core-clip-b)"><rect x="0" y="0" width="50" height="50" fill="#777"/><rect x="50" y="0" width="50" height="50" fill="#999"/><rect x="0" y="50" width="50" height="50" fill="#222"/><rect x="50" y="50" width="50" height="50" fill="#444"/></g></svg>`;
-            },
-            guardian: (color) => {
-                const isW = color === 'white';
-                if (isW) return `<svg class="piece-svg" viewBox="0 0 100 100"><polygon points="0,0 100,0 80,20 20,20" fill="#009DC4" transform="translate(5,5) scale(0.9)"/><polygon points="0,0 0,100 20,80 20,20" fill="#8A2BE2" transform="translate(5,5) scale(0.9)"/><polygon points="100,0 100,100 80,80 80,20" fill="#98FFC3" transform="translate(5,5) scale(0.9)"/><polygon points="0,100 100,100 80,80 20,80" fill="#FF85C0" transform="translate(5,5) scale(0.9)"/><rect x="20" y="20" width="60" height="60" fill="#FF85C0" transform="translate(5,5) scale(0.9)"/></svg>`;
-                return `<svg class="piece-svg" viewBox="0 0 100 100"><path d="M10,35 L50,15 L90,35 L50,55 Z" fill="#999"/><path d="M10,35 L50,55 L50,85 L10,65 Z" fill="#666"/><path d="M50,55 L90,35 L90,65 L50,85 Z" fill="#333"/><rect x="35" y="32" width="30" height="30" fill="#444"/></svg>`;
-            },
-            assassin: (color) => {
-                const isW = color === 'white';
-                return `<svg class="piece-svg" viewBox="0 0 100 100"><defs><radialGradient id="grad_asn_${color}" cx="35%" cy="35%"><stop offset="0%" stop-color="${isW?'#FF85C0':'#ccc'}" /><stop offset="100%" stop-color="${isW?'#8A2BE2':'#222'}" /></radialGradient></defs><circle cx="50" cy="50" r="42" fill="url(#grad_asn_${color})"/><circle cx="40" cy="40" r="10" fill="rgba(255,255,255,0.2)"/></svg>`;
-            },
-            pawn: (color) => {
-                 const isW = color === 'white';
-                 return `<svg class="piece-svg pawn-svg" viewBox="0 0 100 100"><polygon points="0,0 100,0 50,50" fill="${isW?'#0096FF':'#999'}"/><polygon points="0,0 0,100 50,50" fill="${isW?'#8A2BE2':'#666'}"/><polygon points="100,0 100,100 50,50" fill="${isW?'#66CDAA':'#888'}"/><polygon points="0,100 100,100 50,50" fill="${isW?'#FF69B4':'#333'}"/></svg>`;
-            }
-        };
-
-        /* GAME ENGINE */
+        /* --- ENTRY --- */
         document.addEventListener('DOMContentLoaded', () => {
             initShader(); 
-            const boardElement = document.getElementById('chess-board'), boardContainer = document.getElementById('board-container'), boardShell = document.getElementById('board-shell');
-            const introScreen = document.getElementById('intro-screen'), mainLayout = document.getElementById('main-layout'), startBtn = document.getElementById('start-challenge-btn');
-            const quitBtn = document.getElementById('quit-button'), gameOverModal = document.getElementById('game-over-modal'), nextOverlay = document.getElementById('next-challenger-overlay');
-            const nextBtn = document.getElementById('next-challenger-btn'), whiteCapturedContainer = document.getElementById('white-captured-pieces'), blackCapturedContainer = document.getElementById('black-captured-pieces');
-            const cards = document.querySelectorAll('.ability-card'), challengerLabel = document.getElementById('challenger-label');
-
-            const stages = ['easy', 'medium', 'hard'];
-            let currentStage = 0, board = [], currentPlayer = 'white', selectedPiece = null, validMoves = [], isGameOver = false, isPlayerTurn = true, isAnimating = false;
-            let commanderSwapUsed = { white: false, black: false }, capturedByWhite = [], capturedByBlack = [], activeCard = null, runCardsUsed = {}, assassinRageActive = false;
-
-            startBtn.addEventListener('click', startRun);
-            quitBtn.addEventListener('click', resetToMenu);
-            document.getElementById('play-again-button').addEventListener('click', resetToMenu);
-            nextBtn.addEventListener('click', transitionToNextStage);
-
-            function startRun() {
-                introScreen.classList.add('fade-out');
-                setTimeout(() => {
-                    currentStage = 0; runCardsUsed = {}; mainLayout.classList.add('visible'); mainLayout.classList.remove('hidden'); initializeStage();
-                }, 800);
-            }
-
-            function resetToMenu() {
-                mainLayout.classList.remove('visible'); mainLayout.classList.add('hidden'); gameOverModal.classList.remove('visible'); introScreen.classList.remove('fade-out');
-            }
-
-            function initializeStage() {
-                board = Array.from({ length: 5 }, () => Array(5).fill(null));
-                board[4][2] = { piece: 'commander', color: 'white', svg: PIECES_SVG.commander('white') };
-                board[4][3] = { piece: 'guardian', color: 'white', svg: PIECES_SVG.guardian('white') };
-                board[4][1] = { piece: 'assassin', color: 'white', svg: PIECES_SVG.assassin('white') };
-                board[3][1] = { piece: 'pawn', color: 'white', svg: PIECES_SVG.pawn('white') };
-                board[3][2] = { piece: 'pawn', color: 'white', svg: PIECES_SVG.pawn('white') };
-                board[3][3] = { piece: 'pawn', color: 'white', svg: PIECES_SVG.pawn('white') };
-                board[0][2] = { piece: 'commander', color: 'black', svg: PIECES_SVG.commander('black') };
-                board[0][1] = { piece: 'guardian', color: 'black', svg: PIECES_SVG.guardian('black') };
-                board[0][3] = { piece: 'assassin', color: 'black', svg: PIECES_SVG.assassin('black') };
-                board[1][1] = { piece: 'pawn', color: 'black', svg: PIECES_SVG.pawn('black') };
-                board[1][2] = { piece: 'pawn', color: 'black', svg: PIECES_SVG.pawn('black') };
-                board[1][3] = { piece: 'pawn', color: 'black', svg: PIECES_SVG.pawn('black') };
-                currentPlayer = 'white'; selectedPiece = null; validMoves = []; isGameOver = false; isPlayerTurn = true;
-                commanderSwapUsed = { white: false, black: false }; capturedByWhite = []; capturedByBlack = [];
-                activeCard = null; assassinRageActive = false;
-                updateRunUI(); renderBoard(true); renderCapturedPieces(); updateStatus();
-                nextOverlay.classList.remove('visible'); boardElement.style.opacity = '1';
-            }
-
-            function updateRunUI() {
-                challengerLabel.textContent = `Challenger ${currentStage + 1}`;
-                for(let i=0; i<3; i++) {
-                    const dot = document.getElementById(`dot-${i}`);
-                    if(dot) dot.classList.toggle('active', i <= currentStage);
-                    const line = document.getElementById(`line-${i}`);
-                    if(line) line.classList.toggle('filled', i < currentStage);
-                }
-                cards.forEach(card => card.classList.toggle('disabled', !!runCardsUsed[card.id]));
-            }
-
-            function transitionToNextStage() {
-                nextOverlay.classList.remove('visible'); boardContainer.classList.add('slide-out-left');
-                setTimeout(() => {
-                    boardContainer.classList.remove('slide-out-left'); boardContainer.classList.add('slide-in-right');
-                    currentStage++; initializeStage();
-                    boardContainer.offsetHeight; 
-                    boardContainer.classList.remove('slide-in-right'); boardContainer.classList.add('slide-to-center');
-                    setTimeout(() => boardContainer.classList.remove('slide-to-center'), 800);
-                }, 800);
-            }
-
-            function renderBoard(animate = false) {
-                boardElement.innerHTML = '';
-                const danger = calculateCommanderDanger();
-                for (let r = 0; r < 5; r++) {
-                    for (let c = 0; c < 5; c++) {
-                        const sq = document.createElement('div');
-                        sq.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
-                        sq.dataset.row = r; sq.dataset.col = c;
-                        if (danger.some(ds => ds.r === r && ds.c === c)) { sq.classList.add('in-danger'); spawnEmbers(sq); }
-                        if (board[r][c]) {
-                            const wrapper = document.createElement('div'); wrapper.className = 'piece-wrapper';
-                            wrapper.innerHTML = board[r][c].svg;
-                            if (animate) { const p = wrapper.querySelector('.piece-svg'); p.classList.add('piece-entrance'); p.style.animationDelay = `${(r * 5 + c) * 0.03}s`; }
-                            sq.appendChild(wrapper);
-                        }
-                        boardElement.appendChild(sq);
-                    }
-                }
-                document.querySelectorAll('.square').forEach(s => s.onclick = onSquareClick);
-                cards.forEach(card => card.onclick = onCardClick);
-            }
-
-            function spawnEmbers(con) {
-                con.querySelectorAll('.ember').forEach(e => e.remove());
-                for (let i = 0; i < 3; i++) {
-                    const e = document.createElement('div'); e.className = 'ember';
-                    const x = Math.random() * 80 - 40; e.style.setProperty('--ex', `${x}px`);
-                    e.style.setProperty('--ex_end', `${x + (Math.random() * 20 - 10)}px`);
-                    e.style.animationDelay = `${Math.random() * 1.5}s`; con.appendChild(e);
-                }
-            }
-
-            function onCardClick(e) {
-                if (isAnimating || !isPlayerTurn) return;
-                const cardId = e.currentTarget.id;
-                if (runCardsUsed[cardId]) return;
-                if (activeCard === cardId) { activeCard = null; e.currentTarget.classList.remove('selected'); } 
-                else { cards.forEach(c => c.classList.remove('selected')); activeCard = cardId; e.currentTarget.classList.add('selected'); }
-                if(selectedPiece) selectPiece(selectedPiece.r, selectedPiece.c);
-            }
-
-            async function onSquareClick(e) {
-                if (isGameOver || !isPlayerTurn || isAnimating) return;
-                const r = parseInt(e.currentTarget.dataset.row), c = parseInt(e.currentTarget.dataset.col), p = board[r][c];
-                if (selectedPiece) {
-                    if (selectedPiece.r === r && selectedPiece.c === c) { deselectPiece(); return; }
-                    const move = validMoves.find(m => m.r === r && m.c === c);
-                    if (move) {
-                        const atk = board[selectedPiece.r][selectedPiece.c], cap = !!board[r][c];
-                        await movePiece(selectedPiece.r, selectedPiece.c, r, c, move.isSwap);
-                        if (activeCard) {
-                             if (activeCard === 'card-assassins-rage' && atk.piece === 'assassin' && cap) assassinRageActive = true;
-                            runCardsUsed[activeCard] = true; activeCard = null; cards.forEach(c => c.classList.remove('selected')); updateRunUI();
-                        }
-                        if (assassinRageActive) { assassinRageActive = false; selectPiece(r, c); return; }
-                        deselectPiece(); switchPlayer();
-                    } else if (p && p.color === currentPlayer) selectPiece(r, c);
-                    else deselectPiece();
-                } else if (p && p.color === currentPlayer) selectPiece(r, c);
-            }
-
-            async function movePiece(fR, fC, tR, tC, swap = false) {
-                isAnimating = true;
-                const fSq = document.querySelector(`[data-row='${fR}'][data-col='${fC}']`), tSq = document.querySelector(`[data-row='${tR}'][data-col='${tC}']`);
-                const pEl = fSq.querySelector('.piece-svg'), tP = board[tR][tC];
-                if (tP && !swap) {
-                    const tEl = tSq.querySelector('.piece-svg');
-                    if (tEl) {
-                        tEl.classList.add('shattering'); boardShell.classList.add('impact-shake'); setTimeout(() => boardShell.classList.remove('impact-shake'), 300);
-                        const rect = tSq.getBoundingClientRect(), sRect = boardShell.getBoundingClientRect();
-                        triggerParticles(rect.left - sRect.left + rect.width / 2, rect.top - sRect.top + rect.height / 2, tP.color);
-                    }
-                }
-                if (pEl) {
-                    const fRct = fSq.getBoundingClientRect(), tRct = tSq.getBoundingClientRect();
-                    pEl.style.cssText += `transition:transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);z-index:100;transform:translate(${tRct.left - fRct.left}px, ${tRct.top - fRct.top}px);`;
-                    await new Promise(res => setTimeout(res, 620));
-                }
-                if (swap) { const p1 = board[fR][fC], p2 = board[tR][tC]; board[tR][tC] = p1; board[fR][fC] = p2; commanderSwapUsed[currentPlayer] = true; } 
-                else {
-                    const p = board[fR][fC], target = board[tR][tC];
-                    if (target) {
-                        currentPlayer === 'white' ? capturedByWhite.push(target) : capturedByBlack.push(target);
-                        renderCapturedPieces(); if (target.piece === 'commander') isGameOver = true;
-                    }
-                    board[tR][tC] = p; board[fR][fC] = null;
-                }
-                renderBoard(); isAnimating = false;
-            }
-
-            function selectPiece(r, c) {
-                deselectPiece(); selectedPiece = { r, c }; 
-                const p = board[r][c];
-                validMoves = getValidMoves(p, r, c);
-                if (activeCard === 'card-knights-leap') validMoves.push(...getKnightLeapMoves(r, c, p.color));
-                if (activeCard === 'card-phase-shift') validMoves = getPhaseShiftMoves();
-                if (p.piece === 'commander' && !commanderSwapUsed[p.color] && !activeCard) document.getElementById('ability-info').textContent = 'SWAP ACTIVE';
-                highlightSquares();
-            }
-
-            function deselectPiece() { selectedPiece = null; validMoves = []; document.getElementById('ability-info').textContent = ''; highlightSquares(); }
-            function highlightSquares() {
-                document.querySelectorAll('.square').forEach(s => s.classList.remove('selected', 'valid-move', 'capture-move', 'swap-move'));
-                if (selectedPiece) document.querySelector(`[data-row='${selectedPiece.r}'][data-col='${selectedPiece.c}']`).classList.add('selected');
-                validMoves.forEach(m => {
-                    const sq = document.querySelector(`[data-row='${m.r}'][data-col='${m.c}']`);
-                    if (sq) { if (m.isSwap) sq.classList.add('swap-move'); else if (board[m.r][m.c]) sq.classList.add('capture-move'); else sq.classList.add('valid-move'); }
-                });
-            }
-            
-            function switchPlayer() {
-                if (isGameOver) { 
-                    if(currentPlayer === 'white') {
-                        if (currentStage < 2) { boardElement.style.opacity = '0.4'; nextOverlay.classList.add('visible'); } 
-                        else { document.getElementById('winner-message').textContent = 'Conquered Aether'; gameOverModal.classList.add('visible'); }
-                    } else { document.getElementById('winner-message').textContent = 'Run Terminated'; gameOverModal.classList.add('visible'); }
-                    return; 
-                }
-                currentPlayer = currentPlayer === 'white' ? 'black' : 'white'; updateStatus();
-                if (currentPlayer === 'black') { isPlayerTurn = false; setTimeout(makeComputerMove, 800); } else isPlayerTurn = true;
-            }
-
-            async function makeComputerMove() {
-                let move; const dif = stages[currentStage];
-                if (dif === 'easy') { const ms = getAllMoves(board, 'black'); move = ms[Math.floor(Math.random() * ms.length)]; }
-                else if (dif === 'medium') { const ms = getAllMoves(board, 'black'); ms.sort((a, b) => { const vB = board[b.to.r][b.to.c], vA = board[a.to.r][a.to.c]; return (vB?1:0) - (vA?1:0); }); move = ms[0]; }
-                else move = minimaxRoot(3, board, 'black');
-                if (move) await movePiece(move.from.r, move.from.c, move.to.r, move.to.c, move.to.isSwap);
-                switchPlayer();
-            }
-
-            function triggerParticles(x, y, color) {
-                const con = document.getElementById('board-shell');
-                for (let i = 0; i < 15; i++) {
-                    const p = document.createElement('div'); p.className = 'particle'; p.style.left = x + 'px'; p.style.top = y + 'px';
-                    const isE = color === 'black'; p.style.background = isE ? '#FF2A80' : '#fff';
-                    const a = Math.random() * Math.PI * 2, v = 80 + Math.random() * 150;
-                    p.style.setProperty('--dx', `${Math.cos(a) * v}px`); p.style.setProperty('--dy', `${Math.sin(a) * v}px`);
-                    p.style.animation = `particleFly 1.5s cubic-bezier(0.23, 1, 0.32, 1) forwards`; con.appendChild(p); setTimeout(() => p.remove(), 1500);
-                }
-            }
-
-            function renderCapturedPieces() {
-                if(!whiteCapturedContainer || !blackCapturedContainer) return;
-                whiteCapturedContainer.innerHTML = ''; blackCapturedContainer.innerHTML = '';
-                capturedByWhite.forEach(p => { const div = document.createElement('div'); div.className = 'captured-piece-svg'; div.innerHTML = p.svg; whiteCapturedContainer.appendChild(div); });
-                capturedByBlack.forEach(p => { const div = document.createElement('div'); div.className = 'captured-piece-svg'; div.innerHTML = p.svg; blackCapturedContainer.appendChild(div); });
-            }
-
-            function calculateCommanderDanger() {
-                const danger = [], wCmd = findPiece('commander', 'white'), bCmd = findPiece('commander', 'black');
-                if (wCmd && isSquareAttacked(wCmd.r, wCmd.c, 'black')) danger.push(wCmd);
-                if (bCmd && isSquareAttacked(bCmd.r, bCmd.c, 'white')) danger.push(bCmd);
-                return danger;
-            }
-
-            function findPiece(t, col) { for(let r=0; r<5; r++) for(let c=0; c<5; c++) if(board[r][c] && board[r][c].piece === t && board[r][c].color === col) return {r, c}; return null; }
-            function updateStatus() { document.getElementById('turn-info').textContent = currentPlayer === 'white' ? "Your Turn" : "Enemy Thinking..."; }
-            function minimaxRoot(d, cB, pC) { const ms = getAllMoves(cB, pC); let bS = -Infinity, bM = null; for(const m of ms) { const s = minimax(d-1, getBoardAfterMove(cB, m), -Infinity, Infinity, false); if (s > bS) { bS = s; bM = m; } } return bM; }
-            function minimax(d, cB, a, b, isM) { if (d === 0) return -evaluate(cB); const ms = getAllMoves(cB, isM ? 'black' : 'white'); if (isM) { let best = -Infinity; for (const m of ms) { best = Math.max(best, minimax(d-1, getBoardAfterMove(cB,m), a, b, false)); a = Math.max(a, best); if (b <= a) break; } return best; } else { let best = Infinity; for (const m of ms) { best = Math.min(best, minimax(d-1, getBoardAfterMove(cB,m), a, b, true)); b = Math.min(best, minimax(d-1, getBoardAfterMove(cB,m), a, b, true)); if (b <= a) break; } return best; } }
-            function evaluate(b) { let s = 0; const v = { commander: 1000, guardian: 40, assassin: 40, pawn: 10 }; for (let r=0; r<5; r++) for (let c=0; c<5; c++) { const p = b[r][c]; if (p) s += (p.color === 'white' ? v[p.piece] : -v[p.piece]); } return s; }
-            function getAllMoves(b, col) { const ms = []; for (let r=0; r<5; r++) for (let c=0; c<5; c++) if (b[r][c] && b[r][c].color === col) getValidMoves(b[r][c], r, c, b).forEach(m => ms.push({from: {r,c}, to: m})); return ms; }
-            function getBoardAfterMove(b, m) { const n = JSON.parse(JSON.stringify(b)); n[m.to.r][m.to.c] = n[m.from.r][m.from.c]; n[m.from.r][m.from.c] = null; return n; }
-            function isWithinBoard(r, c) { return r >= 0 && r < 5 && c >= 0 && c < 5; }
-            
-            function getValidMoves(p, r, c, b = board) {
-                if (!p) return []; const ms = [], col = p.color;
-                if (p.piece === 'pawn') {
-                    const dir = col === 'white' ? -1 : 1; if (isWithinBoard(r+dir, c) && !b[r+dir][c]) ms.push({r: r+dir, c});
-                    [[r+dir, c-1], [r+dir, c+1]].forEach(([nr, nc]) => { if (isWithinBoard(nr, nc) && b[nr][nc] && b[nr][nc].color !== col) ms.push({r: nr, c: nc}); });
-                } else if (p.piece === 'guardian') { [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr, dc]) => { for (let i=1; i<=2; i++) { const nr = r+dr*i, nc = c+dc*i; if (!isWithinBoard(nr, nc)) break; if (b[nr][nc]) { if(b[nr][nc].color !== col) ms.push({r: nr, c: nc}); break; } ms.push({r: nr, c: nc}); } }); }
-                else if (p.piece === 'assassin') { [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([dr, dc]) => { const nr = r+dr, nc = c+dc; if (isWithinBoard(nr, nc)) { if (!b[nr][nc] || b[nr][nc].color !== col) ms.push({r: nr, c: nc}); const nr2 = r+dr*2, nc2 = c+dc*2; if (isWithinBoard(nr2, nc2) && (!b[nr][nc] || b[nr][nc].color === col)) if (!b[nr2][nc2] || b[nr2][nc2].color !== col) ms.push({r: nr2, c: nc2}); } }); }
-                else if (p.piece === 'commander') { for(let dr=-1; dr<=1; dr++) for(let dc=-1; dc<=1; dc++) { if (dr===0 && dc===0) continue; const nr = r+dr, nc = c+dc; if (isWithinBoard(nr, nc)) { const t = b[nr][nc]; if (!t || t.color !== col) ms.push({r: nr, c: nc}); if (!commanderSwapUsed[col] && t && t.color === col) ms.push({r: nr, c: nc, isSwap: true}); } } }
-                return ms;
-            }
-            
-            function getKnightLeapMoves(r, c, col) { const m = []; [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]].forEach(([dr, dc]) => { const nr = r+dr, nc = c+dc; if (isWithinBoard(nr, nc) && (!board[nr][nc] || board[nr][nc].color !== col)) m.push({r: nr, c: nc}); }); return m; }
-            function getPhaseShiftMoves() { const m = []; for(let r=0; r<5; r++) for(let c=0; c<5; c++) if(!board[r][c]) m.push({r, c}); return m; }
-            function isSquareAttacked(r, c, attackerColor, b = board) { 
-                return getAllMoves(b, attackerColor).some(m => m.to.r === r && m.to.c === c); 
-            }
+            if (el('start-challenge-btn')) el('start-challenge-btn').onclick = startRun;
+            if (el('quit-button')) el('quit-button').onclick = resetToMenu;
+            if (el('final-reset-btn')) el('final-reset-btn').onclick = resetToMenu; 
         });
     </script>
 </body>
